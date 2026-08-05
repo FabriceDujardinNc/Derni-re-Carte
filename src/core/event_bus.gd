@@ -55,6 +55,7 @@ signal player_sat_down(character)                 ## De retour au sanctuaire : i
 signal stalling_started(character)                ## Trop lent à piocher : caillassage autorisé !
 signal stalling_ended(character)                  ## Il a pioché (ou est mort) : on repose les cailloux.
 signal projectile_thrown(from: Vector3, to: Vector3) ## Visuel de lancer (répliqué en réseau).
+signal chain_echo(character)                      ## Mode Enchaînés : le partenaire a encaissé (tressaillement VISIBLE).
 
 ## Joueur actuellement caillassable (géré par le TurnManager, null sinon).
 ## État partagé volontairement ici : tous les modules en ont besoin (IA, entrées, UI).

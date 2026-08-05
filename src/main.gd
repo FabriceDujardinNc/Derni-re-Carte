@@ -65,6 +65,11 @@ func _ready() -> void:
 		for arg in user_args:
 			if arg.begins_with("players="):
 				player_count = clampi(arg.get_slice("=", 1).to_int(), 2, 8)
+			elif arg.begins_with("mode="):
+				GameConfig.mode = arg.get_slice("=", 1)
+	# Les Enchaînés demandent au moins 4 joueurs (2 paires) pour avoir du sens.
+	if GameConfig.mode == "chains" and player_count < 4:
+		GameConfig.mode = "ffa"
 	seat_radius = 2.0 + (player_count - 2) * (1.0 / 6.0)  # 2.0 m à 2 → 3.0 m à 8.
 	table_radius = seat_radius - 0.8
 	Audio.stop_music()  # fin de l'ambiance de bar : place à la tension.
@@ -89,6 +94,12 @@ func _ready() -> void:
 	# En réseau : enregistre les personnages (relais d'événements / marionnettes).
 	if Net.active:
 		Net.match_begin(characters)
+
+	# Mode Les Enchaînés : appariement secret, uniquement chez l'hôte.
+	if GameConfig.mode == "chains" and Net.is_server:
+		var chains := preload("res://src/core/chain_mode.gd").new()
+		add_child(chains)
+		chains.setup(characters)
 	else:
 		Net.characters = characters  # référence aussi utile en solo (audio, etc.).
 

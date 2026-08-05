@@ -122,6 +122,9 @@ func _ready() -> void:
 		if lambin == self:
 			_turn_marker.text = "🪨 PIOCHE !!!"
 			_turn_marker.modulate = Color(1.0, 0.35, 0.2))
+	EventBus.chain_echo.connect(func(who) -> void:
+		if who == self:
+			_play_chain_echo())
 
 func is_alive() -> bool:
 	return health != null and health.is_alive()
@@ -867,6 +870,17 @@ func _lower_card() -> void:
 	_arm_tween.tween_property(_card_visual, "position", CARD_REST_POS, 0.35) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 	_arm_tween.chain().tween_callback(func() -> void: _card_visual.visible = false)
+
+## Mode Enchaînés : tressaillement quand le partenaire encaisse. VISIBLE de
+## tous — les bons observateurs relient les frissons aux coups reçus…
+func _play_chain_echo() -> void:
+	if not is_alive():
+		return
+	var tween := create_tween()
+	tween.tween_property(_body, "rotation_degrees:z", 5.0, 0.06)
+	tween.tween_property(_body, "rotation_degrees:z", -5.0, 0.08)
+	tween.tween_property(_body, "rotation_degrees:z", 3.0, 0.06)
+	tween.tween_property(_body, "rotation_degrees:z", 0.0, 0.1)
 
 ## Joue une émote au-dessus de la tête (petit "pop" élastique, puis disparition).
 func play_emote(emote: String) -> void:

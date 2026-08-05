@@ -10,6 +10,7 @@ const PLAYER_COLORS: Array[Color] = [
 ]
 
 var player_name := "Player"
+var mode := "ffa"  ## "ffa" (chacun pour soi) ou "chains" (Les Enchaînés, paires secrètes).
 var player_count := 8   ## 2 à 8 (design : 4-8, mais 2-3 utiles pour tester).
 var color_index := 0    ## Couleur du joueur local dans PLAYER_COLORS.
 var tutorial_done := false  ## Tutoriel déjà lu cette session : on ne le remontre pas.

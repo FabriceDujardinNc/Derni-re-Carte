@@ -171,10 +171,11 @@ func start_match_as_host(table_size: int) -> void:
 	while new_seats.size() < maxi(table_size, new_seats.size()) and bot_index < bot_names.size():
 		new_seats.append({"peer": -1, "name": bot_names[bot_index], "color": (new_seats.size()) % 8})
 		bot_index += 1
-	rpc_start_match.rpc(new_seats)
+	rpc_start_match.rpc(new_seats, GameConfig.mode)
 
 @rpc("authority", "call_local", "reliable")
-func rpc_start_match(new_seats: Array) -> void:
+func rpc_start_match(new_seats: Array, mode: String) -> void:
+	GameConfig.mode = mode  # le mode choisi par l'hôte s'applique à tous.
 	seats = new_seats
 	var my_id := multiplayer.get_unique_id()
 	my_seat = 0
@@ -247,6 +248,8 @@ func _install_server_relay() -> void:
 		_bcast("status", {"s": seat_of(c), "n": status_name}))
 	EventBus.projectile_thrown.connect(func(from: Vector3, to: Vector3) -> void:
 		_bcast("proj", {"f": from, "t": to}))
+	EventBus.chain_echo.connect(func(c) -> void:
+		_bcast("cecho", {"s": seat_of(c)}))
 	# État de santé : synchronisation par personnage.
 	for i in characters.size():
 		var seat := i
@@ -314,6 +317,8 @@ func net_event(type: String, data: Dictionary) -> void:
 			if receiver != null:
 				receiver.wear_flower()
 			EventBus.flower_offered.emit(c, receiver)
+		"cecho":
+			EventBus.chain_echo.emit(c)
 		"tuto_wait":
 			EventBus.tutorial_waiting.emit(data["names"])
 		"tuto_go":

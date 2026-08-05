@@ -11,6 +11,8 @@ var _selected_color := 0
 var _ip_edit: LineEdit
 var _password_edit: LineEdit
 var _error_label: Label
+var _mode_buttons := {}  ## "ffa" / "chains" -> Button
+var _selected_mode := "ffa"
 var _title: Label
 var _panel: PanelContainer
 var _joining := false
@@ -135,6 +137,32 @@ func _build_ui() -> void:
 		_color_buttons.append(button)
 	_refresh_color_buttons()
 
+	# --- Mode de jeu ---
+	form.add_child(_section_label("⚔️  Mode de jeu"))
+	var mode_row := HBoxContainer.new()
+	mode_row.add_theme_constant_override("separation", 10)
+	form.add_child(mode_row)
+	var mode_definitions := [
+		["ffa", "🗡️ Chacun pour soi"],
+		["chains", "⛓️ Les Enchaînés"],
+	]
+	for definition in mode_definitions:
+		var mode_button := Button.new()
+		mode_button.text = definition[1]
+		mode_button.custom_minimum_size = Vector2(0, 40)
+		mode_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		UiKit.style_button(mode_button, UiKit.ACCENT_BLUE, 16)
+		mode_button.pressed.connect(_on_mode_selected.bind(definition[0]))
+		mode_row.add_child(mode_button)
+		_mode_buttons[definition[0]] = mode_button
+	var mode_hint := Label.new()
+	mode_hint.text = "Les Enchaînés : paires SECRÈTES — si ton enchaîné meurt, tu meurs (4 joueurs min)."
+	mode_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	mode_hint.modulate = Color(1, 1, 1, 0.5)
+	form.add_child(mode_hint)
+	_selected_mode = GameConfig.mode
+	_refresh_mode_buttons()
+
 	form.add_child(HSeparator.new())
 
 	# --- Solo ---
@@ -210,6 +238,14 @@ func _animate_entrance() -> void:
 
 # ---------------------------------------------------------------- Actions
 
+func _on_mode_selected(mode: String) -> void:
+	_selected_mode = mode
+	_refresh_mode_buttons()
+
+func _refresh_mode_buttons() -> void:
+	for mode in _mode_buttons:
+		_mode_buttons[mode].modulate.a = 1.0 if mode == _selected_mode else 0.45
+
 func _on_color_selected(index: int) -> void:
 	_selected_color = index
 	_refresh_color_buttons()
@@ -223,6 +259,7 @@ func _apply_settings() -> void:
 	GameConfig.player_name = chosen_name if not chosen_name.is_empty() else "Player"
 	GameConfig.player_count = int(_count_slider.value)
 	GameConfig.color_index = _selected_color
+	GameConfig.mode = _selected_mode
 
 func _show_error(message: String) -> void:
 	_error_label.add_theme_color_override("font_color", Color(1, 0.4, 0.35))

@@ -41,8 +41,8 @@ func _next_turn() -> void:
 	if not match_running:
 		return
 	var alive := _alive_players()
-	if alive.size() <= 1:
-		_end_match(alive[0] if alive.size() == 1 else null)
+	if alive.size() <= 1 or _same_chain(alive):
+		_end_match(alive[0] if alive.size() >= 1 else null)
 		return
 	# Avance jusqu'au prochain joueur vivant.
 	for i in players.size():
@@ -119,16 +119,38 @@ func _on_player_died(character, cause: String) -> void:
 		return
 	EventBus.log_public.emit("💀 %s est hors-jeu ! (%s)" % [character.display_name, cause])
 	var alive := _alive_players()
-	if alive.size() <= 1:
-		_end_match(alive[0] if alive.size() == 1 else null)
+	if alive.size() <= 1 or _same_chain(alive):
+		_end_match(alive[0] if alive.size() >= 1 else null)
 		return
 	# Si le joueur courant meurt en attendant sa pioche (poison, Destin…), on avance.
 	if _awaiting_draw and character == current_player():
 		_awaiting_draw = false
 		_next_turn()
 
+## Mode Enchaînés : si tous les survivants partagent la même chaîne,
+## la partie s'arrête sur une victoire partagée.
+func _same_chain(alive: Array) -> bool:
+	if GameConfig.mode != "chains" or alive.size() < 2:
+		return false
+	var chain_nodes := get_tree().get_nodes_in_group("chain_mode")
+	if chain_nodes.is_empty():
+		return false
+	var group: Array = chain_nodes[0].group_of(alive[0])
+	for character in alive:
+		if not character in group:
+			return false
+	var names: Array[String] = []
+	for character in alive:
+		names.append(character.display_name)
+	EventBus.log_public.emit("⛓️ Enchaînés jusqu'au bout : %s remportent la partie ENSEMBLE !"
+		% " et ".join(names))
+	return true
+
 func _end_match(winner) -> void:
 	match_running = false
+	# Fin des hostilités : plus de gifles/cailloux/cartes après le verdict
+	# (les bots, eux, ne s'arrêteraient jamais d'eux-mêmes…).
+	EventBus.match_started = false
 	# Double KO ? L'AUDACE départage : le plus flamboyant l'emporte, même mort.
 	if winner == null and not players.is_empty():
 		var boldest = null
