@@ -92,6 +92,9 @@ func _ready() -> void:
 	else:
 		Net.characters = characters  # référence aussi utile en solo (audio, etc.).
 
+	# Menu pause (Échap) : options et sorties — la partie continue derrière.
+	add_child(preload("res://src/ui/pause_menu.gd").new())
+
 	# Tutoriel d'avant-partie : flèches sur les éléments clés, lecture libre.
 	var tutorial: CanvasLayer = preload("res://src/ui/tutorial.gd").new()
 	tutorial.targets = {

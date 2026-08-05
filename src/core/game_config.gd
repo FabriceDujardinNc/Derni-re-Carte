@@ -13,3 +13,8 @@ var player_name := "Player"
 var player_count := 8   ## 2 à 8 (design : 4-8, mais 2-3 utiles pour tester).
 var color_index := 0    ## Couleur du joueur local dans PLAYER_COLORS.
 var tutorial_done := false  ## Tutoriel déjà lu cette session : on ne le remontre pas.
+
+# --- Options (menu pause) ---
+var volume := 1.0             ## Volume principal (0 à 1).
+var mouse_sensitivity := 1.0  ## Multiplicateur de sensibilité souris (0.4 à 2).
+var fullscreen := false

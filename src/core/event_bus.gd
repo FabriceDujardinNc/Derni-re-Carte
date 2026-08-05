@@ -33,6 +33,10 @@ var match_started := false
 ## Vrai pendant le compte à rebours : cailloux et gifles GRATUITS (personne ne
 ## peut mourir), puis tout le monde reprend sa place avec 100 % de PV.
 var warmup := false
+
+## Vrai quand le menu pause est ouvert (le jeu CONTINUE — social oblige —
+## mais les entrées gameplay du joueur local sont coupées).
+var pause_open := false
 signal hand_selected(character, index: int)       ## Sélection dans la main (UI locale).
 signal match_ended(winner)                        ## Fin de partie (winner peut être null).
 

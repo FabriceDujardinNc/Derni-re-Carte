@@ -56,6 +56,10 @@ func _update_orbit() -> void:
 	camera.look_at(target)
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Menu pause ouvert : aucune entrée gameplay (le menu gère Échap lui-même).
+	if EventBus.pause_open:
+		return
+
 	# Si la souris s'est échappée de la fenêtre, un clic la verrouille à nouveau.
 	# (Sauf en fin de partie : la souris doit rester libre pour les boutons.)
 	if event is InputEventMouseButton and event.pressed and not _match_over \
@@ -65,23 +69,18 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	# Regard libre (le langage corporel passe aussi par "où on regarde").
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		var sensitivity := MOUSE_SENSITIVITY * GameConfig.mouse_sensitivity
 		if _spectating:
-			_orbit_yaw -= event.relative.x * MOUSE_SENSITIVITY
-			_orbit_pitch = clampf(_orbit_pitch - event.relative.y * MOUSE_SENSITIVITY, -1.4, -0.15)
+			_orbit_yaw -= event.relative.x * sensitivity
+			_orbit_pitch = clampf(_orbit_pitch - event.relative.y * sensitivity, -1.4, -0.15)
 			_update_orbit()
 			return
-		character.rotate_y(-event.relative.x * MOUSE_SENSITIVITY)
-		_pitch = clampf(_pitch - event.relative.y * MOUSE_SENSITIVITY, -1.1, 0.6)
+		character.rotate_y(-event.relative.x * sensitivity)
+		_pitch = clampf(_pitch - event.relative.y * sensitivity, -1.1, 0.6)
 		camera.rotation.x = _pitch
 		return
 
-	# Échap : libérer / capturer la souris.
-	if event.is_action_pressed("ui_cancel"):
-		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		else:
-			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-		return
+	# (Échap est géré par le menu pause.)
 
 	# Spectateur : seule la molette (zoom) reste active.
 	if _spectating:
@@ -182,7 +181,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 
 func _process(delta: float) -> void:
-	if not character.is_alive():
+	if not character.is_alive() or EventBus.pause_open:
 		return
 	# L'espionnage est GÉOMÉTRIQUE : assis ou debout, on lit la manche de
 	# quiconque nous montre son dos d'assez près.
