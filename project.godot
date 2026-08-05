@@ -21,6 +21,11 @@ CardDatabase="*res://src/cards/card_database.gd"
 GameConfig="*res://src/core/game_config.gd"
 Net="*res://src/networking/network_manager.gd"
 Audio="*res://src/audio/audio_director.gd"
+Voice="*res://src/audio/voice_chat.gd"
+
+[audio]
+
+driver/enable_input=true
 
 [display]
 

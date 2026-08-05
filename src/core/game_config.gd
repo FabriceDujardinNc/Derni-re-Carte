@@ -19,3 +19,5 @@ var tutorial_done := false  ## Tutoriel déjà lu cette session : on ne le remon
 var volume := 1.0             ## Volume principal (0 à 1).
 var mouse_sensitivity := 1.0  ## Multiplicateur de sensibilité souris (0.4 à 2).
 var fullscreen := false
+var voice_enabled := true     ## Micro actif (parler avec V). Jouer sans micro = OK.
+var voice_volume := 1.0       ## Volume des voix des AUTRES (0 = sourdine).

@@ -242,7 +242,7 @@ func _build_ui() -> void:
 
 	# Rappel des contrôles (bas, centré).
 	var hint := Label.new()
-	hint.text = "ESPACE : piocher · R : révéler · clic droit : utiliser · E : se lever · ZQSD : marcher · 1-4 : émotes · Échap : pause"
+	hint.text = "ESPACE : piocher · R : révéler · clic droit : utiliser · E : se lever · ZQSD : marcher · V : parler · 1-4 : émotes · Échap : pause"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	hint.offset_top = -32

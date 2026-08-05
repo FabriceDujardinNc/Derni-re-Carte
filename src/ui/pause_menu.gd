@@ -83,6 +83,28 @@ func _build_ui() -> void:
 		sensitivity_label.text = "🖱️  Sensibilité souris : ×%.1f" % value)
 	box.add_child(sensitivity_slider)
 
+	# --- Voix ---
+	var mic_check := CheckButton.new()
+	mic_check.text = "🎤  Micro activé (maintenir V pour parler)"
+	mic_check.button_pressed = GameConfig.voice_enabled
+	mic_check.toggled.connect(func(pressed: bool) -> void:
+		Voice.set_microphone_enabled(pressed))
+	box.add_child(mic_check)
+
+	var voice_label := Label.new()
+	voice_label.text = "🗣️  Volume des voix : %d %%" % int(GameConfig.voice_volume * 100)
+	box.add_child(voice_label)
+	var voice_slider := HSlider.new()
+	voice_slider.min_value = 0
+	voice_slider.max_value = 100
+	voice_slider.step = 5
+	voice_slider.value = GameConfig.voice_volume * 100
+	voice_slider.custom_minimum_size = Vector2(0, 26)
+	voice_slider.value_changed.connect(func(value: float) -> void:
+		GameConfig.voice_volume = value / 100.0
+		voice_label.text = "🗣️  Volume des voix : %d %%" % int(value))
+	box.add_child(voice_slider)
+
 	# --- Plein écran ---
 	var fullscreen_check := CheckButton.new()
 	fullscreen_check.text = "🖥️  Plein écran"

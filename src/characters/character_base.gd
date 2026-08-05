@@ -83,6 +83,8 @@ var _emote_label: Label3D
 var _card_label: Label3D
 var _card_emoji_label: Label3D
 var _turn_marker: Label3D      ## « À TOI ! » au-dessus de la tête, visible de tous.
+var _talk_icon: Label3D        ## 🎤 pendant que ce joueur parle au micro.
+var _talk_hide_at := 0
 var _overhead_visible := true
 var _shoulder_l: Node3D
 var _shoulder_r: Node3D
@@ -218,6 +220,17 @@ func _build_visuals() -> void:
 	# RANGÉES EN VRAC, visibles de quiconque regarde ton dos. L'espionnage
 	# est physique : se placer derrière quelqu'un = voir son jeu.
 	_build_bag()
+
+	# 🎤 au-dessus de la tête pendant qu'il parle (lire QUI parle = gameplay).
+	_talk_icon = Label3D.new()
+	_talk_icon.text = "🎤"
+	_talk_icon.font = GameFonts.emoji_font()
+	_talk_icon.font_size = 64
+	_talk_icon.pixel_size = 0.004
+	_talk_icon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_talk_icon.position = Vector3(0.45, 2.3, 0)
+	_talk_icon.visible = false
+	add_child(_talk_icon)
 
 	# Corps de collision : permet de VISER ce joueur (lancer de grenade…).
 	collision_body = StaticBody3D.new()
@@ -601,6 +614,12 @@ func set_gaze_enabled(enabled: bool) -> void:
 	if not enabled:
 		_head_pivot.rotation = Vector3.ZERO
 
+## Le voice chat vient de jouer un paquet : montrer brièvement le micro.
+func flash_talking() -> void:
+	if _overhead_visible and is_alive():
+		_talk_icon.visible = true
+	_talk_hide_at = Time.get_ticks_msec() + 300
+
 ## Masque nom + émote + marqueur (joueur local : inutile devant sa caméra).
 func set_overhead_visible(visible_overhead: bool) -> void:
 	_overhead_visible = visible_overhead
@@ -608,6 +627,7 @@ func set_overhead_visible(visible_overhead: bool) -> void:
 	_emote_label.visible = visible_overhead
 	if not visible_overhead:
 		_turn_marker.visible = false
+		_talk_icon.visible = false
 
 ## Première personne : la tête passe sur la couche de rendu 2, que la caméra
 ## du joueur local ignore. Les AUTRES joueurs continuent de voir sa tête.
@@ -906,6 +926,8 @@ func _process(delta: float) -> void:
 	_slap_cooldown = maxf(_slap_cooldown - delta, 0.0)
 	_rock_cooldown = maxf(_rock_cooldown - delta, 0.0)
 	_drink_cooldown = maxf(_drink_cooldown - delta, 0.0)
+	if _talk_icon.visible and Time.get_ticks_msec() > _talk_hide_at:
+		_talk_icon.visible = false
 	# Respiration : plus le personnage est abîmé, plus il halète.
 	var breath_freq := 2.0 + (100 - health.visual_state) * 0.04
 	_body.scale.y = 1.0 + sin(_time * breath_freq) * 0.015

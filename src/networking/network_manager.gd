@@ -604,6 +604,28 @@ func net_transforms(batch: Dictionary) -> void:
 			c.position = c.position.lerp(batch[seat][0], 0.35)
 			c.rotation.y = lerp_angle(c.rotation.y, batch[seat][1], 0.35)
 
+# ---------------------------------------------------------------- Voix
+
+func send_voice(data: PackedByteArray) -> void:
+	input_voice.rpc_id(1, data)
+
+@rpc("any_peer", "call_remote", "unreliable_ordered")
+func input_voice(data: PackedByteArray) -> void:
+	if is_server:
+		var seat := _seat_of_sender()
+		if seat >= 0:
+			relay_voice(seat, data)
+
+## L'hôte rediffuse la voix à tous (et l'écoute lui-même).
+func relay_voice(seat: int, data: PackedByteArray) -> void:
+	net_voice.rpc(seat, data)
+	if seat != my_seat:
+		Voice.receive(seat, data)
+
+@rpc("authority", "call_remote", "unreliable_ordered")
+func net_voice(seat: int, data: PackedByteArray) -> void:
+	Voice.receive(seat, data)
+
 @rpc("any_peer", "call_remote", "unreliable_ordered")
 func input_transform(pos: Vector3, yaw: float) -> void:
 	var c = _char(_seat_of_sender())
