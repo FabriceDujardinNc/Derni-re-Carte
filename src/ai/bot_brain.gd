@@ -1,0 +1,198 @@
+class_name BotBrain
+extends Node
+## BotBrain — IA d'un joueur bot, pilotée par une personnalité.
+##
+## Version prototype : le bot pioche à son tour et RÉAGIT via des émotes,
+## honnêtement ou en bluffant selon sa personnalité. C'est la brique de base
+## du futur AI Director : les personnalités influenceront ensuite la lecture
+## des autres joueurs, les accusations vocales (TTS) et les tells simulés.
+
+enum Personality { MENTEUR, PEUREUX, AGRESSIF, CALCULATEUR, TROLL, PRUDENT }
+
+## Probabilité d'afficher une émotion INVERSE de ce que le bot ressent.
+const BLUFF_CHANCE := {
+	Personality.MENTEUR: 0.85,
+	Personality.PEUREUX: 0.1,
+	Personality.AGRESSIF: 0.4,
+	Personality.CALCULATEUR: 0.6,
+	Personality.TROLL: 0.5,
+	Personality.PRUDENT: 0.3,
+}
+
+## Émote favorite quand le bot observe la pioche d'un autre joueur.
+const SPECTATE_EMOTE := {
+	Personality.MENTEUR: "🤫",
+	Personality.PEUREUX: "😱",
+	Personality.AGRESSIF: "👎",
+	Personality.CALCULATEUR: "😏",
+	Personality.TROLL: "😂",
+	Personality.PRUDENT: "🤫",
+}
+
+const EMOTE_GOOD: Array[String] = ["😀", "😂", "👍"]
+const EMOTE_BAD: Array[String] = ["😱", "😭"]
+
+## Probabilité de lancer une carte offensive stockée, à son tour.
+const AGGRO_CHANCE := {
+	Personality.MENTEUR: 0.3,
+	Personality.PEUREUX: 0.15,
+	Personality.AGRESSIF: 0.8,
+	Personality.CALCULATEUR: 0.45,
+	Personality.TROLL: 0.55,
+	Personality.PRUDENT: 0.2,
+}
+
+## Probabilité de révéler volontairement sa carte piochée (+1 point d'audace).
+const REVEAL_CHANCE := {
+	Personality.MENTEUR: 0.05,
+	Personality.PEUREUX: 0.3,
+	Personality.AGRESSIF: 0.25,
+	Personality.CALCULATEUR: 0.35,
+	Personality.TROLL: 0.4,
+	Personality.PRUDENT: 0.2,
+}
+
+## Probabilité de se lever pour aller espionner (testée toutes les ~15 s).
+const SPY_CHANCE := {
+	Personality.MENTEUR: 0.5,
+	Personality.PEUREUX: 0.1,
+	Personality.AGRESSIF: 0.3,
+	Personality.CALCULATEUR: 0.6,
+	Personality.TROLL: 0.5,
+	Personality.PRUDENT: 0.15,
+}
+
+var personality := Personality.PRUDENT
+
+@onready var character: CharacterBase = get_parent()
+
+var _my_turn := false
+
+func _ready() -> void:
+	EventBus.turn_started.connect(_on_turn_started)
+	EventBus.card_drawn.connect(_on_card_drawn)
+	EventBus.card_resolved.connect(func(who, _card: Dictionary) -> void:
+		if who == character:
+			_my_turn = false)
+	EventBus.stalling_started.connect(_on_stalling_started)
+	_spy_loop()
+	_defense_loop()
+
+## Quelqu'un fait poireauter la table : on le caillasse jusqu'à ce qu'il pioche.
+func _on_stalling_started(lambin) -> void:
+	if lambin == character or not character.is_alive():
+		return
+	await get_tree().create_timer(randf_range(0.8, 2.5)).timeout
+	while EventBus.stalling_player == lambin and character.is_alive() \
+			and is_instance_valid(lambin) and lambin.is_alive():
+		# Un espion debout profite du chaos ? Il devient une cible de choix.
+		var target = lambin
+		var spies := get_tree().get_nodes_in_group("characters").filter(
+			func(c) -> bool: return c != character and c.is_alive() and not c.is_seated)
+		if not spies.is_empty() and randf() < 0.4:
+			target = spies.pick_random()
+		character.throw_rock(target)
+		await get_tree().create_timer(randf_range(1.4, 2.8)).timeout
+
+func _on_turn_started(who) -> void:
+	if who != character or not character.is_alive():
+		return
+	_my_turn = true
+	# En vadrouille quand son tour arrive ? On rentre s'asseoir d'abord.
+	if not character.is_seated:
+		character.return_to_seat()
+		await character.seated
+		if not character.is_alive():
+			return
+	# Petit temps de "réflexion" pour rester crédible.
+	await get_tree().create_timer(randf_range(1.0, 2.0)).timeout
+	if not character.is_alive():
+		return
+	_maybe_use_stored_card()
+	await get_tree().create_timer(randf_range(0.5, 1.0)).timeout
+	if character.is_alive():
+		EventBus.draw_requested.emit(character)
+
+## De temps en temps, le bot se lève pour aller lorgner les cartes de quelqu'un.
+func _spy_loop() -> void:
+	while is_instance_valid(character):
+		await get_tree().create_timer(randf_range(10.0, 22.0)).timeout
+		if not is_instance_valid(character) or not character.is_alive():
+			return
+		if _my_turn or not character.is_seated:
+			continue
+		if randf() >= float(SPY_CHANCE[personality]):
+			continue
+		var targets := get_tree().get_nodes_in_group("characters").filter(
+			func(c) -> bool: return c != character and c.is_alive())
+		if not targets.is_empty():
+			character.spy_walk(targets.pick_random())
+
+## Un joueur debout rôde ? À portée de bras : CLAC. Plus loin : caillou.
+## Zèle selon le tempérament, MAIS avec un long temps de recharge : être
+## debout doit rester risqué, pas suicidaire (fleur, espionnage, billard…).
+## Et un porteur de fleur est sacré : aucun bot ne s'en prend à lui.
+func _defense_loop() -> void:
+	while is_instance_valid(character):
+		await get_tree().create_timer(1.0).timeout
+		if not is_instance_valid(character) or not character.is_alive():
+			return
+		for other in get_tree().get_nodes_in_group("characters"):
+			if other == character or other.is_seated or not other.is_alive() or other.has_flower:
+				continue
+			var acted := false
+			if character.global_position.distance_to(other.global_position) <= 1.7:
+				if randf() < float(AGGRO_CHANCE[personality]):
+					acted = character.try_slap(other)
+			elif randf() < float(AGGRO_CHANCE[personality]) * 0.08:
+				acted = character.throw_rock(other)
+			if acted:
+				# Temps de recharge : un bot ne mitraille jamais.
+				await get_tree().create_timer(randf_range(5.0, 9.0)).timeout
+				break
+
+## Le bot joue une carte de sa manche : soin s'il est mal en point,
+## carte offensive selon son agressivité.
+func _maybe_use_stored_card() -> void:
+	for i in character.hand.size():
+		var card: Dictionary = character.hand[i]
+		var heals: bool = card.get("effects", []).any(
+			func(e) -> bool: return e.get("type", "") == "heal")
+		if heals and character.health.hp <= 45:
+			character.use_card(i, character)
+			return
+		# Les grenades se lancent à tout moment, sur n'importe qui.
+		if card.get("targetable", false) and randf() < float(AGGRO_CHANCE[personality]):
+			var victims := get_tree().get_nodes_in_group("characters").filter(
+				func(c) -> bool: return c != character and c.is_alive())
+			if not victims.is_empty():
+				character.use_card(i, victims.pick_random())
+			return
+
+func _on_card_drawn(who, card: Dictionary) -> void:
+	if not character.is_alive():
+		return
+	if who == character:
+		await get_tree().create_timer(randf_range(0.6, 1.8)).timeout
+		if character.is_alive():
+			character.play_emote(_pick_reaction(card))
+			# Parfois, le bot joue la transparence : carte révélée, point empoché.
+			if randf() < float(REVEAL_CHANCE[personality]):
+				await get_tree().create_timer(randf_range(0.3, 0.8)).timeout
+				if character.is_alive():
+					character.reveal_card()
+	elif randf() < 0.18:
+		# Réaction de spectateur : ambiance de table, faux indices gratuits.
+		await get_tree().create_timer(randf_range(0.5, 2.0)).timeout
+		if character.is_alive():
+			character.play_emote(SPECTATE_EMOTE[personality])
+
+## Choisit l'émote de réaction à SA carte : honnête… ou pas.
+func _pick_reaction(card: Dictionary) -> String:
+	# Neutre = soulagement (rien ne se passe) ; utilitaire = une arme en main.
+	var feels_good: bool = card.get("category", "") in ["positive", "neutral", "utility"]
+	var bluffs: bool = randf() < float(BLUFF_CHANCE[personality])
+	if personality == Personality.TROLL and randf() < 0.4:
+		return "😏"  # Le troll adore semer le doute.
+	var shows_good: bool = feels_good != bluffs  # XOR : bluffer = montrer l'inverse.
+	return (EMOTE_GOOD if shows_good else EMOTE_BAD).pick_random()

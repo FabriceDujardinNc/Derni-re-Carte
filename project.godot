@@ -1,0 +1,33 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Dernière Carte"
+run/main_scene="res://scenes/menu.tscn"
+config/features=PackedStringArray("4.7")
+
+[autoload]
+
+EventBus="*res://src/core/event_bus.gd"
+CardDatabase="*res://src/cards/card_database.gd"
+GameConfig="*res://src/core/game_config.gd"
+Net="*res://src/networking/network_manager.gd"
+Audio="*res://src/audio/audio_director.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+
+[rendering]
+
+renderer/rendering_method="mobile"
+anti_aliasing/quality/msaa_3d=1

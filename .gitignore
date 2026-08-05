@@ -1,0 +1,10 @@
+# Godot 4 : cache d'import et données éditeur (jamais versionnés)
+.godot/
+
+# Exports
+export/
+*.tmp
+
+# Système
+.DS_Store
+Thumbs.db

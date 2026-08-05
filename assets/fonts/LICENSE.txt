@@ -1,0 +1,11 @@
+Polices embarquées :
+
+- NotoSans.ttf — Copyright Google / The Noto Project Authors.
+- NotoColorEmoji.ttf — Copyright Google Inc.
+
+Distribuées sous licence SIL Open Font License 1.1 (OFL) :
+https://openfontlicense.org/
+
+Utilisation, redistribution et embarquement dans un logiciel (y compris
+commercial) autorisés, tant que les polices elles-mêmes ne sont pas vendues
+séparément et que cette notice est conservée.

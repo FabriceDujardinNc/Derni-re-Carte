@@ -1,0 +1,105 @@
+{
+	"cards": [
+		{
+			"id": "medikit",
+			"name": "Médikit",
+			"emoji": "❤️",
+			"category": "positive",
+			"weight": 14,
+			"keepable": true,
+			"description": "Soigne 30 PV. À garder pour le bon moment.",
+			"effects": [{ "type": "heal", "amount": 30 }]
+		},
+		{
+			"id": "bouclier",
+			"name": "Bouclier",
+			"emoji": "🛡️",
+			"category": "positive",
+			"weight": 12,
+			"keepable": true,
+			"description": "Absorbe les 20 prochains points de dégâts. À garder en réserve.",
+			"effects": [{ "type": "shield", "amount": 20 }]
+		},
+		{
+			"id": "grenade_lancable",
+			"name": "Grenade lançable",
+			"emoji": "🤾",
+			"category": "utility",
+			"weight": 8,
+			"keepable": true,
+			"targetable": true,
+			"description": "À lancer sur la tronche d'un adversaire : -20 PV à l'impact.",
+			"effects": [{ "type": "damage", "amount": 20 }]
+		},
+		{
+			"id": "huile_chaude",
+			"name": "Huile chaude",
+			"emoji": "🍳",
+			"category": "utility",
+			"weight": 6,
+			"keepable": true,
+			"targetable": true,
+			"description": "Ça éclabousse et ça brûle : -4 PV/s pendant 4 s sur la cible.",
+			"effects": [{ "type": "dot", "dps": 4, "duration": 4 }]
+		},
+		{
+			"id": "mini_grenade",
+			"name": "Mini-grenade",
+			"emoji": "💣",
+			"category": "negative",
+			"weight": 18,
+			"description": "BOUM. -15 PV. Au moins, c'était une petite grenade.",
+			"effects": [{ "type": "damage", "amount": 15 }]
+		},
+		{
+			"id": "poison",
+			"name": "Poison",
+			"emoji": "☠️",
+			"category": "negative",
+			"weight": 14,
+			"description": "-2 PV par seconde pendant 10 secondes. Bon appétit.",
+			"effects": [{ "type": "dot", "dps": 2, "duration": 10 }]
+		},
+		{
+			"id": "brulure",
+			"name": "Brûlure",
+			"emoji": "🔥",
+			"category": "negative",
+			"weight": 14,
+			"description": "-5 PV par seconde pendant 4 secondes. Ça pique.",
+			"effects": [{ "type": "dot", "dps": 5, "duration": 4 }]
+		},
+		{
+			"id": "explosion",
+			"name": "Explosion",
+			"emoji": "🧨",
+			"category": "negative",
+			"weight": 8,
+			"description": "-35 PV. Là, par contre, c'était une grosse grenade.",
+			"effects": [{ "type": "damage", "amount": 35 }]
+		},
+		{
+			"id": "rien",
+			"name": "Absolument Rien",
+			"emoji": "👻",
+			"category": "neutral",
+			"weight": 19.9,
+			"description": "Il ne se passe rien. Mais les autres ne le savent pas…",
+			"effects": [
+				{
+					"type": "fake",
+					"message": "🔊 Un bruit de goupille retentit quelque part autour de la table…"
+				}
+			]
+		},
+		{
+			"id": "destin",
+			"name": "Carte du Destin",
+			"emoji": "💀",
+			"category": "legendary",
+			"weight": 0.1,
+			"description": "Tu es condamné. Tu ne sais pas quand. Bonne chance.",
+			"effects": [{ "type": "doom", "min_delay": 30, "max_delay": 60 }]
+		}
+	]
+}
