@@ -314,6 +314,20 @@ func net_event(type: String, data: Dictionary) -> void:
 			if receiver != null:
 				receiver.wear_flower()
 			EventBus.flower_offered.emit(c, receiver)
+		"tuto_wait":
+			EventBus.tutorial_waiting.emit(data["names"])
+		"tuto_go":
+			EventBus.warmup = true
+			EventBus.tutorial_waiting.emit([])
+		"count":
+			var n := int(data["n"])
+			EventBus.countdown_tick.emit(n)
+			if n == 0:
+				EventBus.warmup = false
+				EventBus.match_started = true
+				for player in characters:
+					if is_instance_valid(player):
+						player.reset_for_match()
 		"emote":
 			if int(data["s"]) != my_seat:  # sa propre émote a déjà été jouée localement.
 				c.play_emote(data["e"])
@@ -396,6 +410,15 @@ func send_billiard(ball_index: int, direction: Vector3) -> void:
 
 func send_flower_pick() -> void:
 	input_flower_pick.rpc_id(1)
+
+func send_drink() -> void:
+	input_drink.rpc_id(1)
+
+@rpc("any_peer", "call_remote", "reliable")
+func input_drink() -> void:
+	var c = _char(_seat_of_sender())
+	if is_server and c != null:
+		c.drink()
 
 func send_flower_offer(target_seat: int) -> void:
 	input_flower_offer.rpc_id(1, target_seat)
@@ -487,6 +510,64 @@ func input_melee(target_seat: int) -> void:
 	if is_server and attacker != null and target != null:
 		if not attacker.try_slap(target):
 			attacker.throw_rock(target)
+
+# ---------------------------------------------------------------- Tutoriel
+
+var _tuto_ready := {}  ## siège -> a fini (ou passé) le tutoriel.
+
+## Appelé par le tutoriel local quand le joueur a fini de lire.
+func tutorial_ready() -> void:
+	if client_mode():
+		input_tutorial_ready.rpc_id(1)
+	else:
+		_mark_tutorial_ready(my_seat)
+
+@rpc("any_peer", "call_remote", "reliable")
+func input_tutorial_ready() -> void:
+	if is_server:
+		_mark_tutorial_ready(_seat_of_sender())
+
+func _mark_tutorial_ready(seat: int) -> void:
+	if seat >= 0:
+		_tuto_ready[seat] = true
+	_broadcast_tutorial_status()
+
+## Informe tout le monde de qui lit encore.
+func _broadcast_tutorial_status() -> void:
+	var waiting: Array = []
+	for i in seats.size():
+		if int(seats[i]["peer"]) != -1 and not _tuto_ready.has(i):
+			waiting.append(seats[i]["name"])
+	EventBus.tutorial_waiting.emit(waiting)
+	if active:
+		net_event.rpc("tuto_wait", {"names": waiting})
+
+## Remise à zéro avant chaque manche (appelé par main.gd AVANT le tutoriel —
+## surtout pas dans wait_tutorial_ready, qui peut démarrer APRÈS les premiers "prêt").
+func reset_tutorial() -> void:
+	_tuto_ready = {}
+
+## Bloque le début de manche tant que tous les HUMAINS n'ont pas fini le tuto.
+func wait_tutorial_ready() -> void:
+	while true:
+		var all_ready := true
+		if seats.is_empty():
+			all_ready = _tuto_ready.has(0)  # solo : un seul humain, siège 0.
+		else:
+			for i in seats.size():
+				if int(seats[i]["peer"]) != -1 and not _tuto_ready.has(i):
+					all_ready = false
+		if all_ready:
+			break
+		await get_tree().create_timer(0.2).timeout
+	EventBus.warmup = true  # place à l'échauffement (le match démarre après le compte à rebours).
+	EventBus.tutorial_waiting.emit([])
+	if active:
+		net_event.rpc("tuto_go", {})
+
+func bcast_countdown(n: int) -> void:
+	if active:
+		net_event.rpc("count", {"n": n})
 
 # ---------------------------------------------------------------- Positions (15 Hz)
 

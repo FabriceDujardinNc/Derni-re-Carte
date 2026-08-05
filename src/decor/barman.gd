@@ -126,6 +126,9 @@ func _process(delta: float) -> void:
 func poke(clicker) -> void:
 	if clicker == null or not clicker.is_alive():
 		return
+	if not EventBus.match_started:
+		EventBus.log_private.emit(clicker, "🍺 Le barman t'ignore pendant le tutoriel.")
+		return
 	var key: int = clicker.get_instance_id()
 	var count: int = _pokes.get(key, 0) + 1
 	_pokes[key] = count

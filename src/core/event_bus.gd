@@ -21,6 +21,18 @@ signal flower_offered(giver, receiver)            ## …et offerte. Toute la tab
 
 ## La fleur n'existe qu'UNE fois par partie (remis à zéro par main.gd).
 var flower_taken := false
+
+# --- Tutoriel et échauffement d'avant-partie ---
+signal tutorial_waiting(names: Array)  ## Qui lit encore le tutoriel (liste de noms).
+signal countdown_tick(n: int)          ## Compte à rebours d'échauffement (10…1, puis 0 = GO).
+
+## Faux tant que le tutoriel n'est pas terminé par TOUS : on peut se balader,
+## mais les easter eggs (barman, fleur, billard, baston) sont verrouillés.
+var match_started := false
+
+## Vrai pendant le compte à rebours : cailloux et gifles GRATUITS (personne ne
+## peut mourir), puis tout le monde reprend sa place avec 100 % de PV.
+var warmup := false
 signal hand_selected(character, index: int)       ## Sélection dans la main (UI locale).
 signal match_ended(winner)                        ## Fin de partie (winner peut être null).
 

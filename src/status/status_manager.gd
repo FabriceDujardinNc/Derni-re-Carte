@@ -32,6 +32,10 @@ func add_doom(min_delay: float, max_delay: float) -> void:
 	_statuses.append({"kind": "doom", "time_left": randf_range(min_delay, max_delay)})
 	EventBus.status_applied.emit(character, "💀 Destin scellé…")
 
+## Purge tous les statuts (fin de l'échauffement d'avant-partie).
+func clear_all() -> void:
+	_statuses.clear()
+
 func _process(delta: float) -> void:
 	if _statuses.is_empty() or not character.is_alive():
 		return

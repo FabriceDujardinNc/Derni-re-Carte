@@ -159,7 +159,7 @@ func _reset_balls() -> void:
 
 ## Frappe une bille dans une direction (autorité uniquement).
 func strike(ball: RigidBody3D, direction: Vector3, striker) -> void:
-	if not ball.visible:
+	if not ball.visible or not EventBus.match_started:
 		return
 	_last_striker = striker
 	var flat := Vector3(direction.x, 0, direction.z).normalized()

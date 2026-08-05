@@ -55,6 +55,7 @@ var rock_pile_position := Vector3.ZERO
 
 var _slap_cooldown := 0.0
 var _rock_cooldown := 0.0
+var _drink_cooldown := 0.0
 var _move_tween: Tween
 
 var health: HealthComponent
@@ -383,6 +384,36 @@ func _build_card_visual() -> void:
 	_card_label.position = Vector3(0, -0.05, 0.012)
 	_card_visual.add_child(_card_label)
 
+# ---------------------------------------------------------------- Échauffement
+
+## Fin du compte à rebours : chacun reprend sa place, PV à 100 %, ardoise
+## effacée — les cailloux de l'échauffement sont pardonnés.
+func reset_for_match() -> void:
+	if _move_tween and _move_tween.is_valid():
+		_move_tween.kill()
+	auto_moving = false
+	is_seated = true
+	position = seat_position
+	rotation = Vector3(0, seat_rotation, 0)
+	status.clear_all()
+	health.reset()
+	_shake = 0.0
+	_mat.albedo_color = _tinted_color()
+
+# ---------------------------------------------------------------- Le comptoir
+
+## Boire un verre au comptoir : +1 PV. Pas grand-chose, mais la taverne est
+## une taverne. Le barman ressert toutes les 8 secondes, pas plus vite.
+func drink() -> void:
+	if not is_alive() or not EventBus.match_started:
+		return
+	if _drink_cooldown > 0.0:
+		EventBus.log_private.emit(self, "🍺 Le barman essuie encore ton verre… (patiente un peu)")
+		return
+	_drink_cooldown = 8.0
+	health.heal(1)
+	EventBus.log_public.emit("🍺 %s s'accorde un verre au comptoir. (+1 PV)" % display_name)
+
 # ---------------------------------------------------------------- Le sac à dos
 
 ## Sac en cuir + poche arrière TRANSPARENTE avec 3 emplacements de cartes
@@ -479,7 +510,7 @@ func _refresh_bag() -> void:
 
 ## Cueille l'UNIQUE fleur de la partie (autorité seulement).
 func pick_flower() -> void:
-	if not is_alive():
+	if not is_alive() or not EventBus.match_started:
 		return
 	if EventBus.flower_taken:
 		EventBus.log_private.emit(self, "🥀 Il n'y a plus de fleur à offrir cette partie…")
@@ -677,6 +708,8 @@ func clamp_to_arena() -> void:
 
 ## Gifle un joueur DEBOUT à portée. Les assis sont intouchables (sanctuaire).
 func try_slap(target) -> bool:
+	if not EventBus.match_started and not EventBus.warmup:
+		return false
 	if not is_alive() or target == self or target == null or not target.is_alive():
 		return false
 	if _slap_cooldown > 0.0 or target.is_seated:
@@ -696,14 +729,18 @@ func try_slap(target) -> bool:
 ## - TOUT joueur DEBOUT, à tout moment (dégâts doublés : être debout, ça expose) ;
 ## - le lambin assis qui refuse de piocher, pendant la lapidation uniquement.
 func throw_rock(target) -> bool:
+	if not EventBus.match_started and not EventBus.warmup:
+		return false
 	if not is_alive() or target == self or target == null or not target.is_alive():
 		return false
 	if _rock_cooldown > 0.0:
 		return false
-	if target.is_seated and target != EventBus.stalling_player:
-		return false  # assis (et pas lambin) = intouchable aux cailloux.
-	if target.has_flower and target != EventBus.stalling_player:
-		return false  # on ne caillasse pas un porteur de fleur… sauf s'il bloque la partie.
+	# Pendant l'échauffement, TOUT LE MONDE est une cible : défoulez-vous.
+	if EventBus.match_started:
+		if target.is_seated and target != EventBus.stalling_player:
+			return false  # assis (et pas lambin) = intouchable aux cailloux.
+		if target.has_flower and target != EventBus.stalling_player:
+			return false  # on ne caillasse pas un porteur de fleur… sauf s'il bloque la partie.
 	_rock_cooldown = 1.2
 	var swing := create_tween()
 	swing.tween_property(_shoulder_r, "rotation_degrees:x", ARM_RAISED, 0.15)
@@ -854,6 +891,7 @@ func _process(delta: float) -> void:
 	_time += delta
 	_slap_cooldown = maxf(_slap_cooldown - delta, 0.0)
 	_rock_cooldown = maxf(_rock_cooldown - delta, 0.0)
+	_drink_cooldown = maxf(_drink_cooldown - delta, 0.0)
 	# Respiration : plus le personnage est abîmé, plus il halète.
 	var breath_freq := 2.0 + (100 - health.visual_state) * 0.04
 	_body.scale.y = 1.0 + sin(_time * breath_freq) * 0.015

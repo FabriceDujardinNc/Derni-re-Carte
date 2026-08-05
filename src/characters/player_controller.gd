@@ -142,6 +142,12 @@ func _unhandled_input(event: InputEvent) -> void:
 							Net.send_flower_pick()
 						else:
 							character.pick_flower()
+					elif _is_aiming_at_bar():
+						# Un petit verre au comptoir (+1 PV).
+						if Net.client_mode():
+							Net.send_drink()
+						else:
+							character.drink()
 					elif victim != null and character.has_flower:
 						# Offrir sa fleur passe avant la baston.
 						if Net.client_mode():
@@ -299,6 +305,11 @@ func _aimed_ball():
 func _is_aiming_at_pot() -> bool:
 	var hit := _raycast_from_camera(3.0)
 	return not hit.is_empty() and hit.collider.is_in_group("flower_pot")
+
+## Vise-t-on le comptoir du bar, d'assez près pour boire ?
+func _is_aiming_at_bar() -> bool:
+	var hit := _raycast_from_camera(3.0)
+	return not hit.is_empty() and hit.collider.is_in_group("bar_drink")
 
 ## Renvoie le barman si on le vise (il est loin derrière son comptoir).
 func _aimed_barman():

@@ -69,6 +69,9 @@ func _ready() -> void:
 	table_radius = seat_radius - 0.8
 	Audio.stop_music()  # fin de l'ambiance de bar : place à la tension.
 	EventBus.flower_taken = false  # une nouvelle partie, une nouvelle fleur.
+	EventBus.match_started = false  # verrouillé jusqu'à la fin du tutoriel.
+	EventBus.warmup = false
+	Net.reset_tutorial()
 	EventBus.flower_picked.connect(_on_flower_picked)
 	_register_inputs()
 	_build_environment()
@@ -89,14 +92,38 @@ func _ready() -> void:
 	else:
 		Net.characters = characters  # référence aussi utile en solo (audio, etc.).
 
+	# Tutoriel d'avant-partie : flèches sur les éléments clés, lecture libre.
+	var tutorial: CanvasLayer = preload("res://src/ui/tutorial.gd").new()
+	tutorial.targets = {
+		"deck": Vector3(0, 1.35, 0),
+		"rocks": local_player.rock_pile_position + Vector3(0, 0.25, 0),
+		"flower": _polar(0.0, 9.7, 1.3),
+		"billiard": _polar(deg_to_rad(70), 7.2, 1.4),
+		"barman": _polar(deg_to_rad(250), 9.3, 2.5),
+	}
+	add_child(tutorial)
+
 	# La logique de partie ne tourne que chez l'hôte (ou en solo).
 	if Net.is_server:
 		turn_manager = TurnManager.new()
 		add_child(turn_manager)
 		if Net.active:
 			await Net.wait_for_clients(8.0)
-		# Petite respiration avant le premier tour.
-		await get_tree().create_timer(1.0).timeout
+		# La manche ne démarre que quand TOUS les humains ont fini le tutoriel.
+		await Net.wait_tutorial_ready()
+		# Échauffement : 10 s de cailloux gratuits (personne ne peut mourir)…
+		for n in range(10, 0, -1):
+			EventBus.countdown_tick.emit(n)
+			Net.bcast_countdown(n)
+			await get_tree().create_timer(1.0).timeout
+		# …puis chacun reprend sa place, PV à 100 %, et c'est parti.
+		EventBus.warmup = false
+		EventBus.match_started = true
+		for character in characters:
+			character.reset_for_match()
+		EventBus.countdown_tick.emit(0)
+		Net.bcast_countdown(0)
+		await get_tree().create_timer(0.8).timeout
 		turn_manager.start_match(characters)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -364,6 +391,18 @@ func _build_tavern_props() -> void:
 		clean_glass.height = 0.13
 		_add_mesh(clean_glass, _polar(shelf_angle, 8.5, 1.15) + bar_side * (i - 1.0) * 0.4,
 			Color(0.8, 0.88, 0.92))
+
+	# Zone de service : cliquer sur le comptoir/les verres = boire un coup (+1 PV).
+	var drink_zone := StaticBody3D.new()
+	drink_zone.add_to_group("bar_drink")
+	drink_zone.position = _polar(shelf_angle, 8.5, 1.1)
+	var drink_shape := CollisionShape3D.new()
+	var drink_box := BoxShape3D.new()
+	drink_box.size = Vector3(3.2, 0.5, 0.7)
+	drink_shape.shape = drink_box
+	drink_shape.rotation.y = shelf_angle
+	drink_zone.add_child(drink_shape)
+	add_child(drink_zone)
 
 	var barman: Node3D = preload("res://src/decor/barman.gd").new()
 	add_child(barman)

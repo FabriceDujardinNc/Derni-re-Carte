@@ -34,6 +34,9 @@ func take_damage(amount: int, source := "???") -> void:
 		shield -= absorbed
 		remaining -= absorbed
 		shield_changed.emit(shield)
+	# Échauffement d'avant-partie : on encaisse, mais personne ne meurt.
+	if EventBus.warmup and remaining >= hp:
+		remaining = maxi(hp - 1, 0)
 	hp = maxi(hp - remaining, 0)
 	hp_changed.emit(hp, max_hp)
 	damaged.emit(amount, source)
@@ -48,6 +51,16 @@ func heal(amount: int) -> void:
 	hp_changed.emit(hp, max_hp)
 	healed.emit(amount)
 	_refresh_visual_state()
+
+## Remise à neuf complète (fin de l'échauffement).
+func reset() -> void:
+	hp = max_hp
+	shield = 0
+	hp_changed.emit(hp, max_hp)
+	shield_changed.emit(shield)
+	if visual_state != 100:
+		visual_state = 100
+		visual_state_changed.emit(visual_state)
 
 func add_shield(amount: int) -> void:
 	if hp <= 0 or amount <= 0:

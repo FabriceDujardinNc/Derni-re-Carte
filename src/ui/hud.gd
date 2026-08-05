@@ -34,6 +34,7 @@ var _stoning_label: Label
 var _stoning_tween: Tween
 var _draw_prompt: Label
 var _draw_prompt_tween: Tween
+var _countdown_label: Label
 
 func _ready() -> void:
 	_build_ui()
@@ -51,6 +52,7 @@ func _ready() -> void:
 	EventBus.hand_selected.connect(_on_hand_selected)
 	EventBus.stalling_started.connect(_on_stalling_started)
 	EventBus.stalling_ended.connect(_on_stalling_ended)
+	EventBus.countdown_tick.connect(_on_countdown_tick)
 	EventBus.points_changed.connect(func(c, points: int) -> void:
 		if c == local_player:
 			_points_label.text = "⭐ %d point%s d'audace" % [points, "s" if points > 1 else ""])
@@ -161,6 +163,21 @@ func _build_ui() -> void:
 	_card_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_card_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	card_box.add_child(_card_desc)
+
+	# Compte à rebours d'échauffement, plein centre.
+	_countdown_label = Label.new()
+	_countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_countdown_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_countdown_label.offset_left = -300
+	_countdown_label.offset_right = 300
+	_countdown_label.offset_top = -120
+	_countdown_label.offset_bottom = 20
+	_countdown_label.add_theme_font_size_override("font_size", 88)
+	_countdown_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.25))
+	_countdown_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
+	_countdown_label.add_theme_constant_override("shadow_offset_y", 4)
+	_countdown_label.visible = false
+	root.add_child(_countdown_label)
 
 	# Grand rappel de pioche, au centre : impossible de rater son tour.
 	_draw_prompt = Label.new()
@@ -436,6 +453,27 @@ func _refresh_hand() -> void:
 		else:
 			slot.text = "—"
 			slot.modulate = Color(1, 1, 1, 0.35)
+
+## Échauffement : gros chiffres au centre, cailloux gratuits, puis GO.
+func _on_countdown_tick(n: int) -> void:
+	_countdown_label.visible = true
+	_countdown_label.pivot_offset = _countdown_label.size / 2.0
+	if n > 0:
+		_countdown_label.text = str(n)
+		_turn_label.text = "🪨 ÉCHAUFFEMENT — défoulez-vous, tout sera pardonné !"
+		_turn_label.add_theme_color_override("font_color", Color(1, 0.7, 0.3))
+		Audio.play("click", -4.0)
+	else:
+		_countdown_label.text = "🎴 GO !"
+		_turn_label.text = ""
+		Audio.play("ding", -2.0)
+		var tween := create_tween()
+		tween.tween_interval(1.0)
+		tween.tween_callback(func() -> void: _countdown_label.visible = false)
+	var pop := create_tween()
+	_countdown_label.scale = Vector2(1.4, 1.4)
+	pop.tween_property(_countdown_label, "scale", Vector2.ONE, 0.3) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _on_stalling_started(lambin) -> void:
 	if lambin == local_player:
