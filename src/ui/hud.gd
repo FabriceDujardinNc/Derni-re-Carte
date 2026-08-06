@@ -37,6 +37,8 @@ var _draw_prompt_tween: Tween
 var _countdown_label: Label
 var _chat_input: LineEdit
 var _last_chat_ms := 0
+var _alert_label: Label
+var _alert_tween: Tween
 
 func _ready() -> void:
 	_build_ui()
@@ -56,6 +58,7 @@ func _ready() -> void:
 	EventBus.stalling_ended.connect(_on_stalling_ended)
 	EventBus.countdown_tick.connect(_on_countdown_tick)
 	EventBus.chat_message.connect(_on_chat_message)
+	EventBus.chain_echo.connect(_on_chain_echo)
 	EventBus.points_changed.connect(func(c, points: int) -> void:
 		if c == local_player:
 			_points_label.text = "⭐ %d point%s d'audace" % [points, "s" if points > 1 else ""])
@@ -197,6 +200,20 @@ func _build_ui() -> void:
 	_draw_prompt.add_theme_constant_override("shadow_offset_y", 3)
 	_draw_prompt.visible = false
 	root.add_child(_draw_prompt)
+
+	# Bannière d'alerte générique (écho de chaîne, etc.).
+	_alert_label = Label.new()
+	_alert_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_alert_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_alert_label.offset_left = -320
+	_alert_label.offset_right = 320
+	_alert_label.offset_top = -140
+	_alert_label.offset_bottom = -100
+	_alert_label.add_theme_font_size_override("font_size", 26)
+	_alert_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
+	_alert_label.add_theme_constant_override("shadow_offset_y", 3)
+	_alert_label.visible = false
+	root.add_child(_alert_label)
 
 	# Bannière de lapidation : impossible de la rater.
 	_stoning_label = Label.new()
@@ -427,8 +444,13 @@ func _on_log_public(message: String) -> void:
 	_add_log(message, Color(0.92, 0.92, 0.97))
 
 func _on_log_private(character, message: String) -> void:
-	if character == local_player:
-		_add_log(message, Color(0.65, 0.65, 0.7))
+	if character != local_player:
+		return
+	_add_log(message, Color(0.65, 0.65, 0.7))
+	# Frémissement de chaîne : petit tintement + alerte discrète.
+	if message.begins_with("⛓️ Ta chaîne frémit"):
+		Audio.play("goupille", -8.0)
+		_flash_alert("⛓️ Ta chaîne frémit… il est tout près.", Color(0.8, 0.85, 1.0), 1.6)
 
 func _on_fake_event(message: String) -> void:
 	# Le faux indice ressemble à un vrai : personne ne sait qu'il ne s'est RIEN passé.
@@ -476,6 +498,30 @@ func _refresh_hand() -> void:
 		else:
 			slot.text = "—"
 			slot.modulate = Color(1, 1, 1, 0.35)
+
+## Alerte flash au centre de l'écran (disparaît d'elle-même).
+func _flash_alert(text: String, color: Color, duration := 2.5) -> void:
+	_alert_label.text = text
+	_alert_label.add_theme_color_override("font_color", color)
+	_alert_label.visible = true
+	_alert_label.modulate.a = 1.0
+	if _alert_tween and _alert_tween.is_valid():
+		_alert_tween.kill()
+	_alert_tween = create_tween()
+	_alert_tween.tween_interval(duration)
+	_alert_tween.tween_property(_alert_label, "modulate:a", 0.0, 0.5)
+	_alert_tween.tween_callback(func() -> void: _alert_label.visible = false)
+
+## Mode Enchaînés : TON enchaîné vient d'encaisser — impossible à rater.
+func _on_chain_echo(character) -> void:
+	if character != local_player:
+		return
+	_flash_alert("🩸 Ton enchaîné vient d'encaisser ! Qui a été touché à l'instant ?",
+		Color(1.0, 0.45, 0.45))
+	Audio.play("heart", -2.0)
+	var second_beat := create_tween()
+	second_beat.tween_interval(0.25)
+	second_beat.tween_callback(func() -> void: Audio.play("heart", -4.0))
 
 # ---------------------------------------------------------------- Chat texte
 

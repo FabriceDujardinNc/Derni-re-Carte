@@ -16,7 +16,7 @@ extends Node
 const ECHO_MIN_DAMAGE := 8       # en-dessous, pas d'écho (les ticks de poison restent discrets).
 const ECHO_COOLDOWN_MS := 3000
 const SHIVER_RANGE := 2.0
-const SHIVER_PERIOD := 4.0
+const SHIVER_PERIOD := 2.5
 
 var groups: Array = []  ## Array de groupes (paires, ou trio si nombre impair).
 
@@ -35,7 +35,9 @@ func setup(characters: Array) -> void:
 		groups.append([pool.pop_back(), pool.pop_back()])
 	for character in characters:
 		EventBus.log_private.emit(character,
-			"⛓️ Tu es enchaîné à quelqu'un dans cette salle… S'il meurt, tu meurs. Découvre qui, et protège-le.")
+			"⛓️ Tu es enchaîné à quelqu'un dans cette salle… S'il meurt, tu meurs.")
+		EventBus.log_private.emit(character,
+			"⛓️ INDICES : quand il encaisse, tu le SENS (bannière + cœur) → regarde qui vient d'être touché. Et à moins de 2 m de lui, ta chaîne frémit.")
 	EventBus.player_died.connect(_on_player_died)
 	EventBus.player_damaged.connect(_on_player_damaged)
 
@@ -82,5 +84,5 @@ func _process(delta: float) -> void:
 				var b = group[j]
 				if a.is_alive() and b.is_alive() \
 						and a.global_position.distance_to(b.global_position) < SHIVER_RANGE:
-					EventBus.log_private.emit(a, "⛓️ Ta chaîne frémit doucement…")
-					EventBus.log_private.emit(b, "⛓️ Ta chaîne frémit doucement…")
+					EventBus.log_private.emit(a, "⛓️ Ta chaîne frémit… ton enchaîné est TOUT PRÈS.")
+					EventBus.log_private.emit(b, "⛓️ Ta chaîne frémit… ton enchaîné est TOUT PRÈS.")
