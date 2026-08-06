@@ -147,6 +147,7 @@ func _build_ui() -> void:
 	var mode_definitions := [
 		["ffa", "🗡️ Chacun pour soi"],
 		["chains", "⛓️ Les Enchaînés"],
+		["teams", "⚔️ Équipes"],
 	]
 	for definition in mode_definitions:
 		var mode_button := Button.new()
@@ -158,7 +159,7 @@ func _build_ui() -> void:
 		mode_row.add_child(mode_button)
 		_mode_buttons[definition[0]] = mode_button
 	var mode_hint := Label.new()
-	mode_hint.text = "Les Enchaînés : paires SECRÈTES — si ton enchaîné meurt, tu meurs (4 joueurs min)."
+	mode_hint.text = "Enchaînés : paires secrètes, si ton enchaîné meurt tu meurs · Équipes : Rouge vs Bleu, tir ami autorisé (4 joueurs min)."
 	mode_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	mode_hint.modulate = Color(1, 1, 1, 0.5)
 	form.add_child(mode_hint)

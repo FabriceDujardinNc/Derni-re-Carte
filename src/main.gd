@@ -75,8 +75,8 @@ func _ready() -> void:
 				GameConfig.difficulty = arg.get_slice("=", 1)
 			elif arg.begins_with("sd="):
 				GameConfig.sudden_death_seconds = arg.get_slice("=", 1).to_float()
-	# Les Enchaînés demandent au moins 4 joueurs (2 paires) pour avoir du sens.
-	if GameConfig.mode == "chains" and player_count < 4:
+	# Enchaînés et Équipes demandent au moins 4 joueurs pour avoir du sens.
+	if GameConfig.mode in ["chains", "teams"] and player_count < 4:
 		GameConfig.mode = "ffa"
 	seat_radius = 2.0 + (player_count - 2) * (1.0 / 6.0)  # 2.0 m à 2 → 3.0 m à 8.
 	table_radius = seat_radius - 0.8
@@ -116,6 +116,20 @@ func _ready() -> void:
 		var chains := preload("res://src/core/chain_mode.gd").new()
 		add_child(chains)
 		chains.setup(characters)
+
+	# Mode Équipes : répartition alternée (équilibrée d'office), sur CHAQUE
+	# machine (déterministe par siège — aucune synchro supplémentaire).
+	if GameConfig.mode == "teams":
+		for i in characters.size():
+			characters[i].set_team(i % 2)
+		if Net.is_server:
+			var reds: Array[String] = []
+			var blues: Array[String] = []
+			for i in characters.size():
+				(reds if i % 2 == 0 else blues).append(characters[i].display_name)
+			EventBus.log_public.emit("⚔️ 🔴 Équipe Rouge : %s" % ", ".join(reds))
+			EventBus.log_public.emit("⚔️ 🔵 Équipe Bleue : %s" % ", ".join(blues))
+			EventBus.log_public.emit("⚔️ Dernière équipe debout gagne. Le tir ami existe. Bonne chance.")
 
 	# Menu pause (Échap) : options et sorties — la partie continue derrière.
 	add_child(preload("res://src/ui/pause_menu.gd").new())

@@ -22,6 +22,12 @@ signal seated  ## Émis quand le personnage vient de se rasseoir.
 const HAND_SIZE := 3
 var hand: Array[Dictionary] = []
 
+## Mode Équipes : -1 = aucun camp, 0 = Rouge, 1 = Bleu.
+const TEAM_COLORS: Array[Color] = [Color(0.95, 0.25, 0.2), Color(0.3, 0.55, 0.95)]
+const TEAM_NAMES: Array[String] = ["Rouge", "Bleue"]
+const TEAM_EMOJIS: Array[String] = ["🔴", "🔵"]
+var team := -1
+
 ## Points d'audace : gagnés en RÉVÉLANT volontairement sa carte piochée.
 ## Cacher = garder l'info ; montrer = +1 point et un petit soin. Un dilemme.
 const REVEAL_HEAL := 3
@@ -552,6 +558,29 @@ func _refresh_bag() -> void:
 			(mini.get_node("Titre") as Label3D).text = hand[i].get("name", "")
 		else:
 			mini.visible = false
+
+# ---------------------------------------------------------------- Équipes
+
+## Assigne un camp : bandeau coloré autour du torse + nom préfixé.
+## Le camp se VOIT de loin — la lisibilité des alliances est une mécanique.
+func set_team(team_index: int) -> void:
+	team = team_index
+	var band := CylinderMesh.new()
+	band.top_radius = 0.39
+	band.bottom_radius = 0.39
+	band.height = 0.14
+	var band_visual := MeshInstance3D.new()
+	band_visual.mesh = band
+	var band_material := StandardMaterial3D.new()
+	band_material.albedo_color = TEAM_COLORS[team_index]
+	band_material.emission_enabled = true
+	band_material.emission = TEAM_COLORS[team_index]
+	band_material.emission_energy_multiplier = 0.4
+	band_visual.material_override = band_material
+	band_visual.position = Vector3(0, 1.15, 0)
+	add_child(band_visual)
+	_name_label.text = "%s %s" % [TEAM_EMOJIS[team_index], display_name]
+	_name_label.modulate = TEAM_COLORS[team_index].lightened(0.35)
 
 # ---------------------------------------------------------------- Le vol
 

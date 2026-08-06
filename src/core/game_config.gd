@@ -11,10 +11,10 @@ const PLAYER_COLORS: Array[Color] = [
 
 ## Version affichée au menu ET vérifiée à la connexion réseau : deux versions
 ## différentes ne peuvent pas jouer ensemble (protocole incompatible).
-const VERSION := "v0.8-alpha"
+const VERSION := "v0.9-alpha"
 
 var player_name := "Player"
-var mode := "ffa"  ## "ffa" (chacun pour soi) ou "chains" (Les Enchaînés, paires secrètes).
+var mode := "ffa"  ## "ffa" · "chains" (Enchaînés, paires secrètes) · "teams" (Rouge vs Bleu).
 var difficulty := "moyen"  ## facile · moyen · difficile · nightmare · celeste.
 
 ## Mort subite : au-delà de cette durée de manche, la vie de tous s'écoule

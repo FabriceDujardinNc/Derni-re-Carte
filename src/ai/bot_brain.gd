@@ -154,6 +154,11 @@ func _on_someone_damaged(victim, _amount: int, source: String) -> void:
 					_bump_suspicion(other, 5.0)
 			return
 
+## Mode Équipes : les bots sont LOYAUX — jamais d'attaque volontaire sur un
+## coéquipier (le tir ami reste possible pour les humains maladroits).
+func _is_teammate(other) -> bool:
+	return GameConfig.mode == "teams" and character.team >= 0 and other.team == character.team
+
 ## Choisit une victime : suspicion + faiblesse visible + une part d'imprévu.
 func _pick_victim(candidates: Array):
 	var best = null
@@ -236,9 +241,9 @@ func _spy_loop() -> void:
 		if randf() >= minf(float(SPY_CHANCE[personality]) * _d("spy"), 0.9):
 			continue
 		var targets := get_tree().get_nodes_in_group("characters").filter(
-			func(c) -> bool: return c != character and c.is_alive())
+			func(c) -> bool: return c != character and c.is_alive() and not _is_teammate(c))
 		if not targets.is_empty():
-			character.spy_walk(_pick_victim(targets))  # on espionne les suspects.
+			character.spy_walk(_pick_victim(targets))  # on espionne les suspects (ennemis).
 
 func _flower_errand() -> void:
 	var pots := get_tree().get_nodes_in_group("flower_pot")
@@ -274,7 +279,8 @@ func _defense_loop() -> void:
 		if not is_instance_valid(character) or not character.is_alive():
 			return
 		for other in get_tree().get_nodes_in_group("characters"):
-			if other == character or other.is_seated or not other.is_alive() or other.has_flower:
+			if other == character or other.is_seated or not other.is_alive() or other.has_flower \
+					or _is_teammate(other):
 				continue
 			var distance: float = character.global_position.distance_to(other.global_position)
 			# Quelqu'un rôde dans mon dos ? Je me RETOURNE pour protéger mon sac.
@@ -312,7 +318,7 @@ func _maybe_use_stored_card() -> void:
 		# (suspicion accumulée + blessures apparentes), plus une part de hasard.
 		if card.get("targetable", false) and randf() < minf(float(AGGRO_CHANCE[personality]) * _d("aggro"), 0.95):
 			var victims := get_tree().get_nodes_in_group("characters").filter(
-				func(c) -> bool: return c != character and c.is_alive())
+				func(c) -> bool: return c != character and c.is_alive() and not _is_teammate(c))
 			if not victims.is_empty():
 				var victim = _pick_victim(victims)
 				character.use_card(i, victim)

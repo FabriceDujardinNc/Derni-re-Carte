@@ -411,12 +411,23 @@ func _build_end_screen(winner) -> void:
 				if is_instance_valid(character) and character.is_alive() \
 						and not character in winners:
 					winners.append(character)
+		elif GameConfig.mode == "teams":
+			# Toute l'équipe gagne — y compris les coéquipiers tombés au combat.
+			for character in Net.characters:
+				if is_instance_valid(character) and character.team == winner.team \
+						and not character in winners:
+					winners.append(character)
 
 	var title := Label.new()
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 32)
 	title.add_theme_color_override("font_color", Color(0.95, 0.85, 0.45))
-	if winners.size() > 1:
+	if GameConfig.mode == "teams" and winner != null:
+		title.text = "%s🏆 L'équipe %s remporte la partie !" % [
+			winner.TEAM_EMOJIS[winner.team], winner.TEAM_NAMES[winner.team]]
+		if local_player in winners:
+			title.text += "\n(la TIENNE !)"
+	elif winners.size() > 1:
 		var names: Array[String] = []
 		for character in winners:
 			names.append(character.display_name)

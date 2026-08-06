@@ -62,7 +62,7 @@ func _next_turn() -> void:
 	if not match_running:
 		return
 	var alive := _alive_players()
-	if alive.size() <= 1 or _same_chain(alive):
+	if alive.size() <= 1 or _same_chain(alive) or _same_team(alive):
 		_end_match(alive[0] if alive.size() >= 1 else null)
 		return
 	# Avance jusqu'au prochain joueur vivant.
@@ -140,7 +140,7 @@ func _on_player_died(character, cause: String) -> void:
 		return
 	EventBus.log_public.emit("💀 %s est hors-jeu ! (%s)" % [character.display_name, cause])
 	var alive := _alive_players()
-	if alive.size() <= 1 or _same_chain(alive):
+	if alive.size() <= 1 or _same_chain(alive) or _same_team(alive):
 		_end_match(alive[0] if alive.size() >= 1 else null)
 		return
 	# Si le joueur courant meurt en attendant sa pioche (poison, Destin…), on avance.
@@ -165,6 +165,18 @@ func _same_chain(alive: Array) -> bool:
 		names.append(character.display_name)
 	EventBus.log_public.emit("⛓️ Enchaînés jusqu'au bout : %s remportent la partie ENSEMBLE !"
 		% " et ".join(names))
+	return true
+
+## Mode Équipes : victoire quand tous les survivants portent le même bandeau.
+func _same_team(alive: Array) -> bool:
+	if GameConfig.mode != "teams" or alive.size() < 2:
+		return false
+	var team: int = alive[0].team
+	for character in alive:
+		if character.team != team:
+			return false
+	EventBus.log_public.emit("⚔️ L'équipe %s remporte la partie !"
+		% alive[0].TEAM_NAMES[team])
 	return true
 
 func _end_match(winner) -> void:
