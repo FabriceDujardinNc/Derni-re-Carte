@@ -39,6 +39,7 @@ const PAGES := [
 
 var _page := 0
 var _done := false
+var _reviewing := false  ## Relecture volontaire (P) après un passage automatique.
 var _panel: PanelContainer
 var _title: Label
 var _text: Label
@@ -51,10 +52,25 @@ func _ready() -> void:
 	EventBus.tutorial_waiting.connect(_on_waiting)
 	_build_ui()
 	var args := OS.get_cmdline_user_args()
-	if GameConfig.tutorial_done or "autoplay" in args or "turbo" in args:
-		_finish()  # déjà lu (ou test automatisé) : prêt immédiatement.
+	if "autoplay" in args or "turbo" in args:
+		_finish()  # test automatisé : prêt immédiatement, sans affichage.
+	elif GameConfig.tutorial_done:
+		# Déjà lu cette session : prêt immédiatement, mais on LE DIT clairement
+		# (sinon on croit à un bug quand les autres lisent encore).
+		_finish()
+		_flash_notice("✅ Tutoriel déjà lu — tu es prêt !   (P : le relire)")
 	else:
 		_show_page(0)
+
+func _flash_notice(text: String) -> void:
+	_waiting.text = text
+	_waiting.visible = true
+	var tween := create_tween()
+	tween.tween_interval(6.0)
+	tween.tween_callback(func() -> void:
+		# Ne masque que si la liste d'attente n'a pas pris le relais.
+		if _waiting.text == text:
+			_waiting.visible = false)
 
 func _build_ui() -> void:
 	var root := Control.new()
@@ -99,8 +115,11 @@ func _build_ui() -> void:
 	_waiting.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_waiting.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	_waiting.offset_top = 110
-	_waiting.offset_bottom = 140
+	_waiting.offset_bottom = 148
+	_waiting.add_theme_font_size_override("font_size", 22)
 	_waiting.add_theme_color_override("font_color", Color(0.95, 0.8, 0.4))
+	_waiting.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
+	_waiting.add_theme_constant_override("shadow_offset_y", 2)
 	_waiting.visible = false
 	root.add_child(_waiting)
 
@@ -115,6 +134,20 @@ func _show_page(index: int) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _done:
+		# Relecture à la demande : P rouvre les pages (sans bloquer personne,
+		# on est déjà marqué « prêt »).
+		if _reviewing:
+			if event.is_action_pressed("ui_accept"):
+				if _page + 1 < PAGES.size():
+					_show_page(_page + 1)
+				else:
+					_close_review()
+			elif event is InputEventKey and event.pressed and event.physical_keycode == KEY_P:
+				_close_review()
+		elif event is InputEventKey and event.pressed and event.physical_keycode == KEY_P \
+				and not EventBus.chat_open and not EventBus.pause_open:
+			_reviewing = true
+			_show_page(0)
 		return
 	if event.is_action_pressed("ui_accept"):
 		if _page + 1 < PAGES.size():
@@ -123,6 +156,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			_finish()
 	elif event is InputEventKey and event.pressed and event.physical_keycode == KEY_P:
 		_finish()
+
+func _close_review() -> void:
+	_reviewing = false
+	_panel.visible = false
+	_clear_arrows()
 
 func _finish() -> void:
 	if _done:
