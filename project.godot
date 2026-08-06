@@ -13,6 +13,7 @@ config_version=5
 config/name="Dernière Carte"
 run/main_scene="res://scenes/menu.tscn"
 config/features=PackedStringArray("4.7")
+config/icon="res://icon.svg"
 
 [autoload]
 

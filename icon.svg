@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+	<!-- Dernière Carte : deux cartes sur le tapis d'une taverne sombre. -->
+	<rect width="128" height="128" rx="26" fill="#171120"/>
+	<rect x="6" y="6" width="116" height="116" rx="21" fill="none" stroke="#8a6d2f" stroke-width="2.5" opacity="0.65"/>
+	<!-- Carte du dessous : dos rouge (celle qu'on cache). -->
+	<g transform="rotate(-14 50 68)">
+		<rect x="27" y="32" width="44" height="66" rx="7" fill="#8c2028" stroke="#e8ddc9" stroke-width="3"/>
+		<rect x="34" y="40" width="30" height="50" rx="4" fill="none" stroke="#c9a26a" stroke-width="2" opacity="0.8"/>
+	</g>
+	<!-- Carte du dessus : la dernière, face visible. -->
+	<g transform="rotate(10 78 66)">
+		<rect x="55" y="27" width="46" height="70" rx="7" fill="#f2ead7" stroke="#241c30" stroke-width="3"/>
+		<path d="M78 51 c-7-11 -22-4 -15 9 l15 17 15-17 c7-13 -8-20 -15-9z" fill="#c92f35"/>
+		<circle cx="63" cy="36" r="3" fill="#c92f35"/>
+		<circle cx="93" cy="88" r="3" fill="#c92f35"/>
+	</g>
+	<!-- L'étincelle d'audace. -->
+	<path d="M104 22 l3 7 7 3 -7 3 -3 7 -3-7 -7-3 7-3z" fill="#e9c35f"/>
+</svg>

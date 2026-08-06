@@ -371,6 +371,9 @@ func _show_card(card: Dictionary) -> void:
 	_card_tween.tween_callback(func() -> void: _card_panel.visible = false)
 
 func _on_match_ended(winner) -> void:
+	# L'audace de la partie rejoint la réserve persistante (cosmétiques).
+	if local_player != null and local_player.points > 0:
+		GameConfig.bank_points(local_player.points)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_turn_label.text = ""
 	_stoning_label.visible = false
@@ -483,6 +486,15 @@ func _build_end_screen(winner) -> void:
 		rows.append(row)
 
 	box.add_child(HSeparator.new())
+
+	# Récolte d'audace : ce qui rejoint la réserve cosmétique.
+	if local_player != null and local_player.points > 0:
+		var bank_label := Label.new()
+		bank_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		bank_label.text = "⭐ +%d d'audace en réserve (total : %d) — dépense-les au menu !" \
+			% [local_player.points, GameConfig.audace_bank]
+		bank_label.add_theme_color_override("font_color", Color(1, 0.9, 0.5))
+		box.add_child(bank_label)
 
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 12)

@@ -28,6 +28,10 @@ const TEAM_NAMES: Array[String] = ["Rouge", "Bleue"]
 const TEAM_EMOJIS: Array[String] = ["🔴", "🔵"]
 var team := -1
 
+## Cosmétique : identifiant de chapeau (voir GameConfig.HATS). -1 = choix
+## automatique parmi les 4 gratuits (bots).
+var hat_id := -1
+
 ## Points d'audace : gagnés en RÉVÉLANT volontairement sa carte piochée.
 ## Cacher = garder l'info ; montrer = +1 point et un petit soin. Un dilemme.
 const REVEAL_HEAL := 3
@@ -277,7 +281,36 @@ func _build_accessories() -> void:
 	var hat_mat := StandardMaterial3D.new()
 	hat_mat.albedo_color = color.darkened(0.45)
 	hat_mat.roughness = 0.85
-	match absi(display_name.hash()) % 4:
+	# Chapeau choisi (cosmétique débloqué) pour les humains ; par défaut,
+	# les bots piochent dans les 4 modèles gratuits selon leur nom.
+	var hat := hat_id if hat_id >= 0 else absi(display_name.hash()) % 4
+	_build_hat(hat, hat_mat)
+
+	# Sourcils : deux petites barres sombres au-dessus des yeux.
+	var brow_mat := StandardMaterial3D.new()
+	brow_mat.albedo_color = Color(0.08, 0.08, 0.1)
+	for side in [-1.0, 1.0]:
+		var brow := BoxMesh.new()
+		brow.size = Vector3(0.1, 0.025, 0.02)
+		var mesh := _add_head_mesh(brow, Vector3(0.1 * side, 0.13, -0.25), brow_mat)
+		mesh.rotation_degrees = Vector3(0, 0, 8.0 * side)
+
+	# Pieds : deux demi-sphères sombres, le personnage ne flotte plus.
+	var feet_mat := StandardMaterial3D.new()
+	feet_mat.albedo_color = color.darkened(0.6)
+	for side in [-1.0, 1.0]:
+		var foot := SphereMesh.new()
+		foot.radius = 0.13
+		foot.height = 0.16
+		var mesh := MeshInstance3D.new()
+		mesh.mesh = foot
+		mesh.material_override = feet_mat
+		mesh.position = Vector3(0.14 * side, 0.05, -0.08)
+		add_child(mesh)
+
+## Construit un chapeau par identifiant (voir GameConfig.HATS).
+func _build_hat(hat: int, hat_mat: StandardMaterial3D) -> void:
+	match hat:
 		0:  # Haut-de-forme.
 			var brim := CylinderMesh.new()
 			brim.top_radius = 0.32
@@ -307,30 +340,79 @@ func _build_accessories() -> void:
 			var beret := SphereMesh.new()
 			beret.radius = 0.3
 			beret.height = 0.18
-			var mesh := _add_head_mesh(beret, Vector3(0.06, 0.23, 0), hat_mat)
-			mesh.rotation_degrees = Vector3(0, 0, -12)
-
-	# Sourcils : deux petites barres sombres au-dessus des yeux.
-	var brow_mat := StandardMaterial3D.new()
-	brow_mat.albedo_color = Color(0.08, 0.08, 0.1)
-	for side in [-1.0, 1.0]:
-		var brow := BoxMesh.new()
-		brow.size = Vector3(0.1, 0.025, 0.02)
-		var mesh := _add_head_mesh(brow, Vector3(0.1 * side, 0.13, -0.25), brow_mat)
-		mesh.rotation_degrees = Vector3(0, 0, 8.0 * side)
-
-	# Pieds : deux demi-sphères sombres, le personnage ne flotte plus.
-	var feet_mat := StandardMaterial3D.new()
-	feet_mat.albedo_color = color.darkened(0.6)
-	for side in [-1.0, 1.0]:
-		var foot := SphereMesh.new()
-		foot.radius = 0.13
-		foot.height = 0.16
-		var mesh := MeshInstance3D.new()
-		mesh.mesh = foot
-		mesh.material_override = feet_mat
-		mesh.position = Vector3(0.14 * side, 0.05, -0.08)
-		add_child(mesh)
+			var beret_mesh := _add_head_mesh(beret, Vector3(0.06, 0.23, 0), hat_mat)
+			beret_mesh.rotation_degrees = Vector3(0, 0, -12)
+		4:  # Toque de chef.
+			var white := StandardMaterial3D.new()
+			white.albedo_color = Color(0.94, 0.93, 0.9)
+			var toque := CylinderMesh.new()
+			toque.top_radius = 0.2
+			toque.bottom_radius = 0.17
+			toque.height = 0.3
+			_add_head_mesh(toque, Vector3(0, 0.32, 0), white)
+			var puff := SphereMesh.new()
+			puff.radius = 0.21
+			puff.height = 0.24
+			_add_head_mesh(puff, Vector3(0, 0.48, 0), white)
+		5:  # Sombrero.
+			var straw := StandardMaterial3D.new()
+			straw.albedo_color = Color(0.82, 0.68, 0.35)
+			var brim := CylinderMesh.new()
+			brim.top_radius = 0.5
+			brim.bottom_radius = 0.52
+			brim.height = 0.05
+			_add_head_mesh(brim, Vector3(0, 0.2, 0), straw)
+			var dome := CylinderMesh.new()
+			dome.top_radius = 0.07
+			dome.bottom_radius = 0.2
+			dome.height = 0.24
+			_add_head_mesh(dome, Vector3(0, 0.33, 0), straw)
+		6:  # Casque viking.
+			var metal := StandardMaterial3D.new()
+			metal.albedo_color = Color(0.55, 0.55, 0.6)
+			metal.metallic = 0.7
+			metal.roughness = 0.4
+			var helmet := SphereMesh.new()
+			helmet.radius = 0.3
+			helmet.height = 0.34
+			_add_head_mesh(helmet, Vector3(0, 0.16, 0), metal)
+			var horn_mat := StandardMaterial3D.new()
+			horn_mat.albedo_color = Color(0.9, 0.85, 0.75)
+			for side in [-1.0, 1.0]:
+				var horn := CylinderMesh.new()
+				horn.top_radius = 0.015
+				horn.bottom_radius = 0.06
+				horn.height = 0.26
+				var horn_mesh := _add_head_mesh(horn, Vector3(0.3 * side, 0.26, 0), horn_mat)
+				horn_mesh.rotation_degrees = Vector3(0, 0, -35.0 * side)
+		7:  # Couronne.
+			var gold := StandardMaterial3D.new()
+			gold.albedo_color = Color(0.92, 0.76, 0.25)
+			gold.metallic = 0.8
+			gold.roughness = 0.3
+			var ring := CylinderMesh.new()
+			ring.top_radius = 0.21
+			ring.bottom_radius = 0.21
+			ring.height = 0.1
+			_add_head_mesh(ring, Vector3(0, 0.26, 0), gold)
+			for i in 4:
+				var spike_angle := TAU * i / 4.0
+				var spike := CylinderMesh.new()
+				spike.top_radius = 0.005
+				spike.bottom_radius = 0.035
+				spike.height = 0.12
+				_add_head_mesh(spike,
+					Vector3(sin(spike_angle) * 0.18, 0.36, cos(spike_angle) * 0.18), gold)
+		8:  # Auréole — pour les saints (ou ceux qui le prétendent).
+			var halo_mat := StandardMaterial3D.new()
+			halo_mat.albedo_color = Color(1.0, 0.9, 0.4)
+			halo_mat.emission_enabled = true
+			halo_mat.emission = Color(1.0, 0.85, 0.35)
+			halo_mat.emission_energy_multiplier = 1.4
+			var halo := TorusMesh.new()
+			halo.inner_radius = 0.16
+			halo.outer_radius = 0.22
+			_add_head_mesh(halo, Vector3(0, 0.5, 0), halo_mat)
 
 func _add_head_mesh(mesh: Mesh, pos: Vector3, material: Material) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()

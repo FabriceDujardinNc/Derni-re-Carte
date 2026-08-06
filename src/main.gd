@@ -749,20 +749,26 @@ func _spawn_characters() -> Array:
 		var is_local: bool
 		var display_name: String
 		var color: Color
+		var hat := -1  # -1 = chapeau automatique (bots).
 		if Net.active:
 			var seat: Dictionary = Net.seats[i]
 			is_bot = int(seat["peer"]) == -1
 			is_local = int(seat["peer"]) == my_id
 			display_name = seat["name"]
 			color = palette[int(seat["color"]) % palette.size()]
+			if not is_bot:
+				hat = int(seat.get("hat", 0))
 		else:
 			is_bot = i != 0
 			is_local = i == 0
 			display_name = bot_roster[i - 1]["name"] if is_bot else GameConfig.player_name
 			# Le joueur local reçoit SA couleur ; les bots se partagent le reste.
 			color = palette[(GameConfig.color_index + i) % palette.size()]
+			if is_local:
+				hat = GameConfig.selected_hat
 		var character := CharacterBase.new()
 		character.setup(display_name, color, is_bot)
+		character.hat_id = hat
 		add_child(character)
 
 		# Placement en cercle autour de la table, face au centre.

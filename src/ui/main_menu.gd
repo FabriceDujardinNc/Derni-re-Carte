@@ -15,6 +15,8 @@ var _mode_buttons := {}  ## "ffa" / "chains" -> Button
 var _selected_mode := "ffa"
 var _difficulty_buttons := {}
 var _selected_difficulty := "moyen"
+var _hat_buttons: Array[Button] = []
+var _balance_label: Label
 var _title: Label
 var _panel: PanelContainer
 var _joining := false
@@ -166,6 +168,24 @@ func _build_ui() -> void:
 	_selected_mode = GameConfig.mode
 	_refresh_mode_buttons()
 
+	# --- Boutique de chapeaux (l'audace gagnée en jouant sert ici) ---
+	_balance_label = _section_label("🎩  Ton chapeau — réserve : ⭐ %d" % GameConfig.audace_bank)
+	form.add_child(_balance_label)
+	var hat_grid := GridContainer.new()
+	hat_grid.columns = 3
+	hat_grid.add_theme_constant_override("h_separation", 6)
+	hat_grid.add_theme_constant_override("v_separation", 6)
+	form.add_child(hat_grid)
+	for i in GameConfig.HATS.size():
+		var hat_button := Button.new()
+		hat_button.custom_minimum_size = Vector2(0, 34)
+		hat_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		UiKit.style_button(hat_button, UiKit.ACCENT_BLUE, 13)
+		hat_button.pressed.connect(_on_hat_pressed.bind(i))
+		hat_grid.add_child(hat_button)
+		_hat_buttons.append(hat_button)
+	_refresh_hat_buttons()
+
 	# --- Difficulté des bots ---
 	form.add_child(_section_label("🤖  Difficulté des bots"))
 	var difficulty_row := HBoxContainer.new()
@@ -285,6 +305,32 @@ func _on_mode_selected(mode: String) -> void:
 func _refresh_mode_buttons() -> void:
 	for mode in _mode_buttons:
 		_mode_buttons[mode].modulate.a = 1.0 if mode == _selected_mode else 0.45
+
+## Clic sur un chapeau : le porter s'il est possédé, sinon l'acheter.
+func _on_hat_pressed(hat_id: int) -> void:
+	if hat_id in GameConfig.unlocked_hats:
+		GameConfig.selected_hat = hat_id
+		GameConfig.save_progress()
+	elif GameConfig.buy_hat(hat_id):
+		GameConfig.selected_hat = hat_id
+		GameConfig.save_progress()
+		Audio.play("win", -8.0)
+	else:
+		var price: int = GameConfig.HATS[hat_id]["price"]
+		_show_error("Il te faut ⭐ %d pour « %s » (réserve : %d). Joue avec audace !"
+			% [price, GameConfig.HATS[hat_id]["name"], GameConfig.audace_bank])
+	_refresh_hat_buttons()
+
+func _refresh_hat_buttons() -> void:
+	_balance_label.text = "🎩  Ton chapeau — réserve : ⭐ %d" % GameConfig.audace_bank
+	for i in _hat_buttons.size():
+		var hat: Dictionary = GameConfig.HATS[i]
+		if i in GameConfig.unlocked_hats:
+			_hat_buttons[i].text = hat["name"]
+			_hat_buttons[i].modulate.a = 1.0 if i == GameConfig.selected_hat else 0.45
+		else:
+			_hat_buttons[i].text = "🔒 %s (⭐%d)" % [hat["name"], hat["price"]]
+			_hat_buttons[i].modulate.a = 0.6
 
 func _on_difficulty_selected(difficulty: String) -> void:
 	_selected_difficulty = difficulty

@@ -49,7 +49,7 @@ func host_game(port: int, pwd: String, player_name: String, color: int) -> Error
 	active = true
 	is_server = true
 	password = pwd
-	peers = {1: {"name": player_name, "color": color}}
+	peers = {1: {"name": player_name, "color": color, "hat": GameConfig.selected_hat}}
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	lobby_updated.emit()
 	return OK
@@ -79,7 +79,8 @@ var _pending_join := {}
 
 func _on_connected_to_server() -> void:
 	print("Net : connecté à l'hôte, envoi de la demande d'entrée…")
-	request_join.rpc_id(1, password, _pending_join["name"], _pending_join["color"], GameConfig.VERSION)
+	request_join.rpc_id(1, password, _pending_join["name"], _pending_join["color"],
+		GameConfig.VERSION, GameConfig.selected_hat)
 
 func _on_connection_failed() -> void:
 	print("Net : connexion impossible (IP/port injoignables).")
@@ -120,7 +121,7 @@ func leave() -> void:
 # ---------------------------------------------------------------- Lobby
 
 @rpc("any_peer", "call_remote", "reliable")
-func request_join(pwd: String, player_name: String, color: int, version: String = "?") -> void:
+func request_join(pwd: String, player_name: String, color: int, version: String = "?", hat: int = 0) -> void:
 	if not is_server:
 		return
 	var sender := multiplayer.get_remote_sender_id()
@@ -138,7 +139,7 @@ func request_join(pwd: String, player_name: String, color: int, version: String 
 		multiplayer.multiplayer_peer.disconnect_peer(sender)
 		return
 	print("Net : %s a rejoint le salon." % player_name)
-	peers[sender] = {"name": player_name, "color": color}
+	peers[sender] = {"name": player_name, "color": color, "hat": hat}
 	sync_lobby.rpc(peers)
 	lobby_updated.emit()
 
@@ -172,7 +173,8 @@ func start_match_as_host(table_size: int) -> void:
 	var peer_ids := peers.keys()
 	peer_ids.sort()
 	for peer_id in peer_ids:
-		new_seats.append({"peer": peer_id, "name": peers[peer_id]["name"], "color": peers[peer_id]["color"]})
+		new_seats.append({"peer": peer_id, "name": peers[peer_id]["name"],
+			"color": peers[peer_id]["color"], "hat": int(peers[peer_id].get("hat", 0))})
 	var bot_names := ["Gaston", "Ginette", "Kevin", "Perceval", "Momo", "Jacqueline", "Bob"]
 	var bot_index := 0
 	while new_seats.size() < maxi(table_size, new_seats.size()) and bot_index < bot_names.size():
