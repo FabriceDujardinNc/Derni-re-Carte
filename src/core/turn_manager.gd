@@ -23,6 +23,27 @@ var match_running := false
 var _awaiting_draw := false
 var _turn_id := 0  ## Identifie chaque tour : évite qu'un vieux minuteur agisse sur un tour suivant.
 
+## Mort subite : au-delà du temps limite, la vie de TOUS s'écoule (1 PV/s).
+var _match_elapsed := 0.0
+var _sudden_death := false
+var _drip_accumulator := 0.0
+
+func _process(delta: float) -> void:
+	if not match_running or not EventBus.match_started:
+		return
+	_match_elapsed += delta
+	if not _sudden_death:
+		if _match_elapsed >= GameConfig.sudden_death_seconds:
+			_sudden_death = true
+			EventBus.log_public.emit("💀 MORT SUBITE ! La taverne réclame un vainqueur — la vie de chacun s'écoule…")
+		return
+	_drip_accumulator += delta
+	while _drip_accumulator >= 1.0:
+		_drip_accumulator -= 1.0
+		for player in players:
+			if player.is_alive():
+				player.health.take_damage(1, "Mort subite")
+
 func start_match(p_players: Array) -> void:
 	players = p_players
 	match_running = true

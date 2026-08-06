@@ -39,6 +39,10 @@ var _chat_input: LineEdit
 var _last_chat_ms := 0
 var _alert_label: Label
 var _alert_tween: Tween
+var _timer_label: Label
+var _timer_running := false
+var _timer_elapsed := 0.0
+var _sudden_death_announced := false
 
 func _ready() -> void:
 	_build_ui()
@@ -201,6 +205,19 @@ func _build_ui() -> void:
 	_draw_prompt.visible = false
 	root.add_child(_draw_prompt)
 
+	# ☠️ Compte à rebours de mort subite, en haut à gauche.
+	_timer_label = Label.new()
+	_timer_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	_timer_label.offset_left = 18
+	_timer_label.offset_top = 12
+	_timer_label.offset_right = 220
+	_timer_label.offset_bottom = 44
+	_timer_label.add_theme_font_size_override("font_size", 22)
+	_timer_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
+	_timer_label.add_theme_constant_override("shadow_offset_y", 2)
+	_timer_label.visible = false
+	root.add_child(_timer_label)
+
 	# Bannière d'alerte générique (écho de chaîne, etc.).
 	_alert_label = Label.new()
 	_alert_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -336,6 +353,8 @@ func _on_match_ended(winner) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_turn_label.text = ""
 	_stoning_label.visible = false
+	_timer_running = false
+	_timer_label.visible = false
 	_show_draw_prompt(false)
 	_build_end_screen(winner)
 
@@ -578,6 +597,31 @@ func _on_chat_submitted(text: String) -> void:
 func _on_chat_message(character, text: String) -> void:
 	_add_log("💬 %s : %s" % [character.display_name, text], character.color.lightened(0.35))
 
+# ---------------------------------------------------------------- Mort subite
+
+## Le chrono tourne dès le GO. À zéro : mort subite (la vie de tous s'écoule).
+func _process(delta: float) -> void:
+	if not _timer_running:
+		return
+	_timer_elapsed += delta
+	var remaining := maxf(GameConfig.sudden_death_seconds - _timer_elapsed, 0.0)
+	if remaining > 0.0:
+		_timer_label.text = "☠️ %d:%02d" % [int(remaining) / 60, int(remaining) % 60]
+		if remaining < 60.0:
+			# Dernière minute : rouge qui pulse.
+			_timer_label.add_theme_color_override("font_color",
+				Color(1.0, 0.3 + 0.3 * sin(_timer_elapsed * 6.0), 0.3))
+		else:
+			_timer_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.95, 0.8))
+	else:
+		_timer_label.text = "💀 MORT SUBITE"
+		_timer_label.add_theme_color_override("font_color",
+			Color(1.0, 0.25 + 0.25 * absf(sin(_timer_elapsed * 5.0)), 0.2))
+		if not _sudden_death_announced:
+			_sudden_death_announced = true
+			_flash_alert("💀 MORT SUBITE — la vie de chacun s'écoule !", Color(1.0, 0.3, 0.25), 4.0)
+			Audio.play("alarm", -2.0)
+
 ## Échauffement : gros chiffres au centre, cailloux gratuits, puis GO.
 func _on_countdown_tick(n: int) -> void:
 	_countdown_label.visible = true
@@ -591,6 +635,10 @@ func _on_countdown_tick(n: int) -> void:
 		_countdown_label.text = "🎴 GO !"
 		_turn_label.text = ""
 		Audio.play("ding", -2.0)
+		# Le chrono de mort subite démarre au GO.
+		_timer_elapsed = 0.0
+		_timer_running = true
+		_timer_label.visible = true
 		var tween := create_tween()
 		tween.tween_interval(1.0)
 		tween.tween_callback(func() -> void: _countdown_label.visible = false)

@@ -73,6 +73,8 @@ func _ready() -> void:
 				GameConfig.mode = arg.get_slice("=", 1)
 			elif arg.begins_with("difficulty="):
 				GameConfig.difficulty = arg.get_slice("=", 1)
+			elif arg.begins_with("sd="):
+				GameConfig.sudden_death_seconds = arg.get_slice("=", 1).to_float()
 	# Les Enchaînés demandent au moins 4 joueurs (2 paires) pour avoir du sens.
 	if GameConfig.mode == "chains" and player_count < 4:
 		GameConfig.mode = "ffa"
@@ -92,6 +94,10 @@ func _ready() -> void:
 
 	EventBus.match_ended.connect(func(_winner) -> void: _match_over = true)
 	EventBus.director_event.connect(_on_director_event)
+	# Électrocution : l'écran de la victime tremble (bzzzt).
+	EventBus.player_damaged.connect(func(victim, _amount: int, source: String) -> void:
+		if victim == local_player and source == "Électrocution":
+			_event_table_shake())
 	# La pioche s'illumine quand c'est au joueur local de jouer.
 	EventBus.turn_started.connect(func(who) -> void:
 		_deck_material.emission_enabled = who == local_player)

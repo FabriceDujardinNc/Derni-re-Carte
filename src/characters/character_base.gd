@@ -118,6 +118,10 @@ func _ready() -> void:
 	health.healed.connect(func(amount: int) -> void: EventBus.player_healed.emit(self, amount))
 	health.visual_state_changed.connect(_on_visual_state_changed)
 	health.died.connect(_on_died)
+	health.guardian_saved.connect(func() -> void:
+		play_emote("👼")
+		if not Net.client_mode():
+			EventBus.log_public.emit("👼 L'Ange Gardien arrache %s à la mort !" % display_name))
 	# Réactions "corporelles" aux événements de table.
 	EventBus.turn_started.connect(_on_turn_started_body)
 	EventBus.card_drawn.connect(_on_card_drawn_body)
@@ -868,9 +872,9 @@ func use_card(index: int, target) -> void:
 			target.global_position + Vector3(0, 1.2, 0),
 			func() -> void:
 				if is_instance_valid(target):
-					EffectExecutor.apply(target, card))
+					EffectExecutor.apply(target, card, self))
 	else:
-		EffectExecutor.apply(self, card)
+		EffectExecutor.apply(self, card, self)
 
 # ---------------------------------------------------------------- Réactions
 
