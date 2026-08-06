@@ -144,6 +144,8 @@ func _build_ui() -> void:
 	box.add_child(quit)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if EventBus.chat_open:
+		return  # Échap ferme le chat (géré par le HUD), pas le menu.
 	if event.is_action_pressed("ui_cancel"):
 		set_open(not _root.visible)
 		get_viewport().set_input_as_handled()

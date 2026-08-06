@@ -35,6 +35,8 @@ var _stoning_tween: Tween
 var _draw_prompt: Label
 var _draw_prompt_tween: Tween
 var _countdown_label: Label
+var _chat_input: LineEdit
+var _last_chat_ms := 0
 
 func _ready() -> void:
 	_build_ui()
@@ -53,6 +55,7 @@ func _ready() -> void:
 	EventBus.stalling_started.connect(_on_stalling_started)
 	EventBus.stalling_ended.connect(_on_stalling_ended)
 	EventBus.countdown_tick.connect(_on_countdown_tick)
+	EventBus.chat_message.connect(_on_chat_message)
 	EventBus.points_changed.connect(func(c, points: int) -> void:
 		if c == local_player:
 			_points_label.text = "⭐ %d point%s d'audace" % [points, "s" if points > 1 else ""])
@@ -229,6 +232,26 @@ func _build_ui() -> void:
 		hand_box.add_child(slot)
 		_hand_slots.append(slot)
 
+	# Champ de chat texte (T pour ouvrir, Entrée pour envoyer, Échap pour fermer).
+	_chat_input = LineEdit.new()
+	_chat_input.placeholder_text = "Ton message… (Entrée : envoyer · Échap : annuler)"
+	_chat_input.max_length = 90
+	_chat_input.anchor_left = 0.5
+	_chat_input.anchor_right = 0.5
+	_chat_input.anchor_top = 1.0
+	_chat_input.anchor_bottom = 1.0
+	_chat_input.offset_left = -260
+	_chat_input.offset_right = 260
+	_chat_input.offset_top = -86
+	_chat_input.offset_bottom = -48
+	_chat_input.visible = false
+	_chat_input.text_submitted.connect(_on_chat_submitted)
+	_chat_input.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+			_close_chat()
+			get_viewport().set_input_as_handled())
+	root.add_child(_chat_input)
+
 	# Point de visée au centre : nécessaire pour cliquer sur la pioche.
 	var crosshair := ColorRect.new()
 	crosshair.color = Color(1, 1, 1, 0.4)
@@ -242,7 +265,7 @@ func _build_ui() -> void:
 
 	# Rappel des contrôles (bas, centré).
 	var hint := Label.new()
-	hint.text = "ESPACE : piocher · R : révéler · clic droit : utiliser · E : se lever · ZQSD : marcher · V : parler · 1-4 : émotes · Échap : pause"
+	hint.text = "ESPACE : piocher · R : révéler · clic droit : utiliser · E : se lever · ZQSD : marcher · V : parler · T : chat · 1-4 : émotes · Échap : pause"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	hint.offset_top = -32
@@ -453,6 +476,43 @@ func _refresh_hand() -> void:
 		else:
 			slot.text = "—"
 			slot.modulate = Color(1, 1, 1, 0.35)
+
+# ---------------------------------------------------------------- Chat texte
+
+func _unhandled_input(event: InputEvent) -> void:
+	if EventBus.chat_open or EventBus.pause_open:
+		return
+	if event.is_action_pressed("open_chat"):
+		_open_chat()
+		get_viewport().set_input_as_handled()
+
+func _open_chat() -> void:
+	EventBus.chat_open = true
+	_chat_input.visible = true
+	_chat_input.text = ""
+	_chat_input.grab_focus()
+
+func _close_chat() -> void:
+	EventBus.chat_open = false
+	_chat_input.visible = false
+	_chat_input.release_focus()
+
+func _on_chat_submitted(text: String) -> void:
+	_close_chat()
+	var clean := text.strip_edges()
+	if clean.is_empty():
+		return
+	# Anti-spam : un message par seconde et demie.
+	var now := Time.get_ticks_msec()
+	if now - _last_chat_ms < 1500:
+		return
+	_last_chat_ms = now
+	if Net.client_mode():
+		Net.send_chat(clean)
+	local_player.say(clean)
+
+func _on_chat_message(character, text: String) -> void:
+	_add_log("💬 %s : %s" % [character.display_name, text], character.color.lightened(0.35))
 
 ## Échauffement : gros chiffres au centre, cailloux gratuits, puis GO.
 func _on_countdown_tick(n: int) -> void:

@@ -84,6 +84,8 @@ var _card_label: Label3D
 var _card_emoji_label: Label3D
 var _turn_marker: Label3D      ## « À TOI ! » au-dessus de la tête, visible de tous.
 var _talk_icon: Label3D        ## 🎤 pendant que ce joueur parle au micro.
+var _chat_bubble: Label3D      ## 💬 bulle de dialogue (chat texte).
+var _chat_tween: Tween
 var _talk_hide_at := 0
 var _overhead_visible := true
 var _shoulder_l: Node3D
@@ -220,6 +222,19 @@ func _build_visuals() -> void:
 	# RANGÉES EN VRAC, visibles de quiconque regarde ton dos. L'espionnage
 	# est physique : se placer derrière quelqu'un = voir son jeu.
 	_build_bag()
+
+	# 💬 Bulle de dialogue du chat texte.
+	_chat_bubble = Label3D.new()
+	_chat_bubble.font = GameFonts.ui_font()
+	_chat_bubble.font_size = 36
+	_chat_bubble.pixel_size = 0.0045
+	_chat_bubble.width = 260.0
+	_chat_bubble.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_chat_bubble.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_chat_bubble.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_chat_bubble.outline_size = 14
+	_chat_bubble.position = Vector3(0, 3.0, 0)
+	add_child(_chat_bubble)
 
 	# 🎤 au-dessus de la tête pendant qu'il parle (lire QUI parle = gameplay).
 	_talk_icon = Label3D.new()
@@ -614,6 +629,19 @@ func set_gaze_enabled(enabled: bool) -> void:
 	if not enabled:
 		_head_pivot.rotation = Vector3.ZERO
 
+## Dit un message écrit : bulle au-dessus de la tête + signal (journal, réseau).
+func say(text: String) -> void:
+	var clean := text.strip_edges().left(90)
+	if clean.is_empty():
+		return
+	_chat_bubble.text = "💬 " + clean
+	if _chat_tween and _chat_tween.is_valid():
+		_chat_tween.kill()
+	_chat_tween = create_tween()
+	_chat_tween.tween_interval(3.0 + clean.length() * 0.05)
+	_chat_tween.tween_callback(func() -> void: _chat_bubble.text = "")
+	EventBus.chat_message.emit(self, clean)
+
 ## Le voice chat vient de jouer un paquet : montrer brièvement le micro.
 func flash_talking() -> void:
 	if _overhead_visible and is_alive():
@@ -708,6 +736,25 @@ func spy_walk(target) -> void:
 	_move_tween.tween_method(_walk_arc.bind(a_from, a_to, r_from, r_spy, target), 0.0, 1.0, duration)
 	_move_tween.tween_interval(randf_range(2.0, 3.5))
 	_move_tween.tween_method(_walk_arc.bind(a_to, a_from, r_spy, r_from, null), 0.0, 1.0, duration)
+	_move_tween.tween_callback(sit_down)
+
+## Course générique : se lever, marcher jusqu'à un point (en arc), exécuter
+## une action sur place, puis revenir s'asseoir. (Fleur, comptoir, etc.)
+func errand(a_to: float, r_to: float, on_arrive: Callable) -> void:
+	if not is_seated or not is_alive():
+		return
+	stand_up()
+	auto_moving = true
+	var a_from := atan2(position.x, position.z)
+	var r_from := Vector2(position.x, position.z).length()
+	if _move_tween and _move_tween.is_valid():
+		_move_tween.kill()
+	_move_tween = create_tween()
+	var duration := absf(angle_difference(a_from, a_to)) * 1.1 + 0.5
+	_move_tween.tween_method(_walk_arc.bind(a_from, a_to, r_from, r_to, null), 0.0, 1.0, duration)
+	_move_tween.tween_callback(on_arrive)
+	_move_tween.tween_interval(0.8)
+	_move_tween.tween_method(_walk_arc.bind(a_to, a_from, r_to, r_from, null), 0.0, 1.0, duration)
 	_move_tween.tween_callback(sit_down)
 
 ## Interpole une marche en arc autour de la table (jamais à travers !).

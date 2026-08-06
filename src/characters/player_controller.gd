@@ -56,8 +56,8 @@ func _update_orbit() -> void:
 	camera.look_at(target)
 
 func _unhandled_input(event: InputEvent) -> void:
-	# Menu pause ouvert : aucune entrée gameplay (le menu gère Échap lui-même).
-	if EventBus.pause_open:
+	# Menu pause ou chat ouverts : aucune entrée gameplay.
+	if EventBus.pause_open or EventBus.chat_open:
 		return
 
 	# Si la souris s'est échappée de la fenêtre, un clic la verrouille à nouveau.
@@ -181,7 +181,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 
 func _process(delta: float) -> void:
-	if not character.is_alive() or EventBus.pause_open:
+	if not character.is_alive() or EventBus.pause_open or EventBus.chat_open:
 		return
 	# L'espionnage est GÉOMÉTRIQUE : assis ou debout, on lit la manche de
 	# quiconque nous montre son dos d'assez près.

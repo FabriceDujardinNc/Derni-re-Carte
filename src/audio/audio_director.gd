@@ -189,6 +189,8 @@ func _build_sounds() -> void:
 	_sounds["heart"] = _wav(_tone(55, 0.1, 18.0))
 	_sounds["doom"] = _wav(_tone(65, 0.9, 3.0))
 	_sounds["miaou"] = _wav(_tone(700, 0.09, 9.0, 0.25) + _tone(520, 0.14, 8.0, 0.22))
+	_sounds["thunder"] = _wav(_mix(_rumble(1.1), _tone(48, 0.9, 3.0, 0.5)))
+	_sounds["poule"] = _wav(_square(620, 0.06, 14.0, 0.2) + _square(470, 0.09, 12.0, 0.18))
 	_sounds["creak"] = _wav(_square(95, 0.1, 8.0, 0.12) + _square(70, 0.16, 8.0, 0.1))
 	_sounds["crackle"] = _wav(_noise(0.05, 40.0, 0.3) + _noise(0.04, 50.0, 0.25) + _noise(0.08, 30.0, 0.2))
 	# La musique (8 s d'échantillons) est générée PARESSEUSEMENT au premier

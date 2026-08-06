@@ -56,6 +56,11 @@ signal stalling_started(character)                ## Trop lent à piocher : cail
 signal stalling_ended(character)                  ## Il a pioché (ou est mort) : on repose les cailloux.
 signal projectile_thrown(from: Vector3, to: Vector3) ## Visuel de lancer (répliqué en réseau).
 signal chain_echo(character)                      ## Mode Enchaînés : le partenaire a encaissé (tressaillement VISIBLE).
+signal director_event(event_name: String)         ## Game Director : coupure, orage, poulets… (répliqué).
+signal chat_message(character, text: String)      ## Message écrit : journal + bulle au-dessus du joueur.
+
+## Vrai pendant la saisie d'un message (T) : les touches gameplay sont coupées.
+var chat_open := false
 
 ## Joueur actuellement caillassable (géré par le TurnManager, null sinon).
 ## État partagé volontairement ici : tous les modules en ont besoin (IA, entrées, UI).

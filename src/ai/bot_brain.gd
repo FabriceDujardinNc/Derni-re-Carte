@@ -52,6 +52,16 @@ const REVEAL_CHANCE := {
 	Personality.PRUDENT: 0.2,
 }
 
+## Probabilité de se retourner quand quelqu'un rôde dans son dos (protège le sac).
+const PROTECT_CHANCE := {
+	Personality.MENTEUR: 0.4,
+	Personality.PEUREUX: 0.5,
+	Personality.AGRESSIF: 0.3,
+	Personality.CALCULATEUR: 0.7,
+	Personality.TROLL: 0.3,
+	Personality.PRUDENT: 0.8,
+}
+
 ## Probabilité de se lever pour aller espionner (testée toutes les ~15 s).
 const SPY_CHANCE := {
 	Personality.MENTEUR: 0.5,
@@ -68,6 +78,11 @@ var personality := Personality.PRUDENT
 
 var _my_turn := false
 
+## LE BOT LIT LA TABLE : mémoire de suspicion par joueur. Elle monte quand
+## quelqu'un stocke des cartes, l'attaque (vengeance !), ou rôde dans son dos.
+## Elle guide le choix des cibles de grenades et de cailloux.
+var _suspicion := {}  # instance_id -> score
+
 func _ready() -> void:
 	EventBus.turn_started.connect(_on_turn_started)
 	EventBus.card_drawn.connect(_on_card_drawn)
@@ -75,8 +90,48 @@ func _ready() -> void:
 		if who == character:
 			_my_turn = false)
 	EventBus.stalling_started.connect(_on_stalling_started)
+	# Lecture de la table.
+	EventBus.card_stored.connect(func(who, _card: Dictionary) -> void:
+		_bump_suspicion(who, 1.0))  # il prépare un mauvais coup.
+	EventBus.card_used.connect(func(user, _card: Dictionary, target) -> void:
+		if target == character:
+			_bump_suspicion(user, 5.0))  # VENGEANCE.
+	EventBus.player_damaged.connect(_on_someone_damaged)
+	EventBus.card_revealed.connect(func(who, _card: Dictionary) -> void:
+		_bump_suspicion(who, -0.5))  # la transparence apaise.
 	_spy_loop()
 	_defense_loop()
+
+func _bump_suspicion(who, amount: float) -> void:
+	if who == null or who == character:
+		return
+	var key: int = who.get_instance_id()
+	_suspicion[key] = maxf(float(_suspicion.get(key, 0.0)) + amount, 0.0)
+
+## Les gifles et cailloux signent leurs auteurs : le bot s'en souvient.
+func _on_someone_damaged(victim, _amount: int, source: String) -> void:
+	if victim != character:
+		return
+	for prefix in ["Claque de ", "Caillou de "]:
+		if source.begins_with(prefix):
+			var attacker_name := source.trim_prefix(prefix)
+			for other in get_tree().get_nodes_in_group("characters"):
+				if other.display_name == attacker_name:
+					_bump_suspicion(other, 5.0)
+			return
+
+## Choisit une victime : suspicion + faiblesse visible + une part d'imprévu.
+func _pick_victim(candidates: Array):
+	var best = null
+	var best_score := -INF
+	for candidate in candidates:
+		var score := float(_suspicion.get(candidate.get_instance_id(), 0.0))
+		score += (100 - candidate.health.visual_state) * 0.05  # achever les blessés.
+		score += randf() * 2.0
+		if score > best_score:
+			best_score = score
+			best = candidate
+	return best
 
 ## Quelqu'un fait poireauter la table : on le caillasse jusqu'à ce qu'il pioche.
 func _on_stalling_started(lambin) -> void:
@@ -113,20 +168,53 @@ func _on_turn_started(who) -> void:
 	if character.is_alive():
 		EventBus.draw_requested.emit(character)
 
-## De temps en temps, le bot se lève pour aller lorgner les cartes de quelqu'un.
+## De temps en temps, le bot se lève : fleur s'il va mal, un verre pour le
+## plaisir, ou une virée d'espionnage — vers le joueur le plus SUSPECT.
 func _spy_loop() -> void:
 	while is_instance_valid(character):
 		await get_tree().create_timer(randf_range(10.0, 22.0)).timeout
 		if not is_instance_valid(character) or not character.is_alive():
 			return
-		if _my_turn or not character.is_seated:
+		if _my_turn or not character.is_seated or not EventBus.match_started:
+			continue
+		# Mal en point + fleur disponible ? Le bot va se l'offrir. 💅
+		if character.health.hp < 50 and not EventBus.flower_taken and randf() < 0.6:
+			_flower_errand()
+			continue
+		# Petit verre au comptoir, pour le folklore.
+		if character.health.hp < 95 and randf() < 0.12:
+			_drink_errand()
 			continue
 		if randf() >= float(SPY_CHANCE[personality]):
 			continue
 		var targets := get_tree().get_nodes_in_group("characters").filter(
 			func(c) -> bool: return c != character and c.is_alive())
 		if not targets.is_empty():
-			character.spy_walk(targets.pick_random())
+			character.spy_walk(_pick_victim(targets))  # on espionne les suspects.
+
+func _flower_errand() -> void:
+	var pots := get_tree().get_nodes_in_group("flower_pot")
+	if pots.is_empty():
+		return
+	var nearest: Node3D = null
+	var best := INF
+	for pot in pots:
+		var d: float = character.global_position.distance_to(pot.global_position)
+		if d < best:
+			best = d
+			nearest = pot
+	var angle: float = atan2(nearest.global_position.x, nearest.global_position.z)
+	character.errand(angle, 9.0, func() -> void:
+		character.pick_flower()
+		if character.has_flower:
+			character.offer_flower(character))
+
+func _drink_errand() -> void:
+	var bars := get_tree().get_nodes_in_group("bar_drink")
+	if bars.is_empty():
+		return
+	var angle: float = atan2(bars[0].global_position.x, bars[0].global_position.z)
+	character.errand(angle, 7.6, func() -> void: character.drink())
 
 ## Un joueur debout rôde ? À portée de bras : CLAC. Plus loin : caillou.
 ## Zèle selon le tempérament, MAIS avec un long temps de recharge : être
@@ -140,8 +228,18 @@ func _defense_loop() -> void:
 		for other in get_tree().get_nodes_in_group("characters"):
 			if other == character or other.is_seated or not other.is_alive() or other.has_flower:
 				continue
+			var distance: float = character.global_position.distance_to(other.global_position)
+			# Quelqu'un rôde dans mon dos ? Je me RETOURNE pour protéger mon sac.
+			if character.is_seated and distance < 2.6:
+				var to_other: Vector3 = (other.global_position - character.global_position).normalized()
+				var behind: bool = (-character.global_basis.z).dot(to_other) < -0.2
+				if behind and randf() < float(PROTECT_CHANCE[personality]):
+					character.look_at(Vector3(other.global_position.x, 0, other.global_position.z))
+					character.play_emote(SPECTATE_EMOTE[personality])
+					_bump_suspicion(other, 2.0)
+					continue
 			var acted := false
-			if character.global_position.distance_to(other.global_position) <= 1.7:
+			if distance <= 1.7:
 				if randf() < float(AGGRO_CHANCE[personality]):
 					acted = character.try_slap(other)
 			elif randf() < float(AGGRO_CHANCE[personality]) * 0.08:
@@ -161,12 +259,13 @@ func _maybe_use_stored_card() -> void:
 		if heals and character.health.hp <= 45:
 			character.use_card(i, character)
 			return
-		# Les grenades se lancent à tout moment, sur n'importe qui.
+		# Les grenades se lancent à tout moment — sur la cible la plus MÉRITANTE
+		# (suspicion accumulée + blessures apparentes), plus une part de hasard.
 		if card.get("targetable", false) and randf() < float(AGGRO_CHANCE[personality]):
 			var victims := get_tree().get_nodes_in_group("characters").filter(
 				func(c) -> bool: return c != character and c.is_alive())
 			if not victims.is_empty():
-				character.use_card(i, victims.pick_random())
+				character.use_card(i, _pick_victim(victims))
 			return
 
 func _on_card_drawn(who, card: Dictionary) -> void:

@@ -79,7 +79,7 @@ var _pending_join := {}
 
 func _on_connected_to_server() -> void:
 	print("Net : connecté à l'hôte, envoi de la demande d'entrée…")
-	request_join.rpc_id(1, password, _pending_join["name"], _pending_join["color"])
+	request_join.rpc_id(1, password, _pending_join["name"], _pending_join["color"], GameConfig.VERSION)
 
 func _on_connection_failed() -> void:
 	print("Net : connexion impossible (IP/port injoignables).")
@@ -120,10 +120,17 @@ func leave() -> void:
 # ---------------------------------------------------------------- Lobby
 
 @rpc("any_peer", "call_remote", "reliable")
-func request_join(pwd: String, player_name: String, color: int) -> void:
+func request_join(pwd: String, player_name: String, color: int, version: String = "?") -> void:
 	if not is_server:
 		return
 	var sender := multiplayer.get_remote_sender_id()
+	if version != GameConfig.VERSION:
+		print("Net : joueur %d refusé (version %s ≠ %s)." % [sender, version, GameConfig.VERSION])
+		reject_join.rpc_id(sender, "Versions différentes (hôte %s, toi %s) : téléchargez la même release !"
+			% [GameConfig.VERSION, version])
+		await get_tree().create_timer(0.5).timeout
+		multiplayer.multiplayer_peer.disconnect_peer(sender)
+		return
 	if pwd != password:
 		print("Net : joueur %d refusé (mauvais mot de passe)." % sender)
 		reject_join.rpc_id(sender, "Mot de passe incorrect.")
@@ -250,6 +257,10 @@ func _install_server_relay() -> void:
 		_bcast("proj", {"f": from, "t": to}))
 	EventBus.chain_echo.connect(func(c) -> void:
 		_bcast("cecho", {"s": seat_of(c)}))
+	EventBus.director_event.connect(func(event_name: String) -> void:
+		_bcast("dir", {"n": event_name}))
+	EventBus.chat_message.connect(func(c, text: String) -> void:
+		_bcast("chat", {"s": seat_of(c), "m": text}))
 	# État de santé : synchronisation par personnage.
 	for i in characters.size():
 		var seat := i
@@ -319,6 +330,11 @@ func net_event(type: String, data: Dictionary) -> void:
 			EventBus.flower_offered.emit(c, receiver)
 		"cecho":
 			EventBus.chain_echo.emit(c)
+		"dir":
+			EventBus.director_event.emit(data["n"])
+		"chat":
+			if int(data["s"]) != my_seat:  # son propre message est déjà affiché.
+				c.say(data["m"])
 		"tuto_wait":
 			EventBus.tutorial_waiting.emit(data["names"])
 		"tuto_go":
@@ -418,6 +434,15 @@ func send_flower_pick() -> void:
 
 func send_drink() -> void:
 	input_drink.rpc_id(1)
+
+func send_chat(text: String) -> void:
+	input_chat.rpc_id(1, text)
+
+@rpc("any_peer", "call_remote", "reliable")
+func input_chat(text: String) -> void:
+	var c = _char(_seat_of_sender())
+	if is_server and c != null:
+		c.say(text.strip_edges().left(90))
 
 @rpc("any_peer", "call_remote", "reliable")
 func input_drink() -> void:

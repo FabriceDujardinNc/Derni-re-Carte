@@ -222,6 +222,19 @@ func _build_ui() -> void:
 	quit.pressed.connect(func() -> void: get_tree().quit())
 	column.add_child(quit)
 
+	# Numéro de version : pour vérifier d'un coup d'œil que tout le monde
+	# a la même release avant une partie.
+	var version_label := Label.new()
+	version_label.text = GameConfig.VERSION
+	version_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	version_label.offset_left = -140
+	version_label.offset_top = -34
+	version_label.offset_right = -12
+	version_label.offset_bottom = -10
+	version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	version_label.modulate = Color(1, 1, 1, 0.4)
+	add_child(version_label)
+
 func _section_label(text: String) -> Label:
 	var label := Label.new()
 	label.text = text

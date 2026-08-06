@@ -32,6 +32,10 @@ var _autoplay := false
 var _fire_light: OmniLight3D
 var _fire_time := 0.0
 var _chandelier: Node3D
+var _env: Environment
+var _sun: DirectionalLight3D
+var _lamp_light: OmniLight3D
+var _blackout_active := false
 var _flames: Array[MeshInstance3D] = []
 var _flame_phases: Array[float] = []
 var _blossoms: Array[MeshInstance3D] = []
@@ -39,7 +43,7 @@ var _blossoms: Array[MeshInstance3D] = []
 func _process(delta: float) -> void:
 	_fire_time += delta
 	# Feu de cheminée qui vacille : deux sinus désaccordés ≈ flamme vivante.
-	if _fire_light != null:
+	if _fire_light != null and not _blackout_active:
 		_fire_light.light_energy = 1.4 + sin(_fire_time * 7.0) * 0.2 + sin(_fire_time * 13.7) * 0.12
 	# Le lustre oscille imperceptiblement — la pièce respire.
 	if _chandelier != null:
@@ -85,6 +89,7 @@ func _ready() -> void:
 	_build_hud()
 
 	EventBus.match_ended.connect(func(_winner) -> void: _match_over = true)
+	EventBus.director_event.connect(_on_director_event)
 	# La pioche s'illumine quand c'est au joueur local de jouer.
 	EventBus.turn_started.connect(func(who) -> void:
 		_deck_material.emission_enabled = who == local_player)
@@ -121,6 +126,8 @@ func _ready() -> void:
 	if Net.is_server:
 		turn_manager = TurnManager.new()
 		add_child(turn_manager)
+		# Le Game Director veille : deux parties ne se ressembleront jamais.
+		add_child(preload("res://src/core/game_director.gd").new())
 		if Net.active:
 			await Net.wait_for_clients(8.0)
 		# La manche ne démarre que quand TOUS les humains ont fini le tutoriel.
@@ -165,6 +172,7 @@ func _register_inputs() -> void:
 	_add_key_action("move_right", KEY_D)
 	_add_key_action("toggle_stand", KEY_E)
 	_add_key_action("reveal_card", KEY_R)
+	_add_key_action("open_chat", KEY_T)
 
 func _add_key_action(action: String, key: Key) -> void:
 	if InputMap.has_action(action):
@@ -179,6 +187,7 @@ func _add_key_action(action: String, key: Key) -> void:
 func _build_environment() -> void:
 	# Ambiance "cave de bar" : fond sombre, lampe chaude au-dessus de la table.
 	var env := Environment.new()
+	_env = env
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.07, 0.06, 0.09)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -190,6 +199,7 @@ func _build_environment() -> void:
 	add_child(world_env)
 
 	var sun := DirectionalLight3D.new()
+	_sun = sun
 	sun.rotation_degrees = Vector3(-55, 35, 0)
 	sun.light_energy = 0.5
 	add_child(sun)
@@ -200,6 +210,7 @@ func _build_environment() -> void:
 	add_child(_chandelier)
 
 	var lamp := OmniLight3D.new()
+	_lamp_light = lamp
 	lamp.position = Vector3(0, -1.3, 0)
 	lamp.light_color = Color(1.0, 0.85, 0.6)
 	lamp.light_energy = 3.0
@@ -256,6 +267,22 @@ func _build_arena() -> void:
 	var floor_mesh := PlaneMesh.new()
 	floor_mesh.size = Vector2(24, 24)
 	_add_mesh(floor_mesh, Vector3.ZERO, Color(0.16, 0.12, 0.10))
+
+	# Colliders sol + plateau : les objets physiques (poulets…) s'y posent.
+	var floor_body := StaticBody3D.new()
+	var floor_shape := CollisionShape3D.new()
+	floor_shape.shape = WorldBoundaryShape3D.new()
+	floor_body.add_child(floor_shape)
+	add_child(floor_body)
+	var table_body := StaticBody3D.new()
+	var table_shape := CollisionShape3D.new()
+	var table_cylinder := CylinderShape3D.new()
+	table_cylinder.radius = table_radius
+	table_cylinder.height = 1.06
+	table_shape.shape = table_cylinder
+	table_shape.position = Vector3(0, 0.53, 0)
+	table_body.add_child(table_shape)
+	add_child(table_body)
 	var carpet := CylinderMesh.new()
 	carpet.top_radius = table_radius * 2.1
 	carpet.bottom_radius = table_radius * 2.1
@@ -551,6 +578,109 @@ func _build_tavern_props() -> void:
 
 func _polar(angle: float, radius: float, y: float) -> Vector3:
 	return Vector3(sin(angle) * radius, y, cos(angle) * radius)
+
+# ---------------------------------------------------------------- Événements du Director
+
+## Chaque machine exécute localement la mise en scène demandée par l'hôte.
+func _on_director_event(event_name: String) -> void:
+	match event_name:
+		"blackout":
+			_event_blackout()
+		"storm":
+			_event_storm()
+		"chickens":
+			_event_chicken_rain()
+		"shake":
+			_event_table_shake()
+
+## Noir complet 5 secondes : seules les braises rougeoient encore.
+func _event_blackout() -> void:
+	_blackout_active = true
+	var lamp_energy := _lamp_light.light_energy
+	var ambient := _env.ambient_light_energy
+	var sun_energy := _sun.light_energy
+	_lamp_light.light_energy = 0.0
+	_env.ambient_light_energy = 0.04
+	_sun.light_energy = 0.0
+	_fire_light.light_energy = 0.15
+	Audio.play("impact", -8.0)
+	await get_tree().create_timer(5.0).timeout
+	if not is_inside_tree():
+		return
+	var tween := create_tween().set_parallel(true)
+	tween.tween_property(_lamp_light, "light_energy", lamp_energy, 1.2)
+	tween.tween_property(_env, "ambient_light_energy", ambient, 1.2)
+	tween.tween_property(_sun, "light_energy", sun_energy, 1.2)
+	tween.chain().tween_callback(func() -> void: _blackout_active = false)
+	EventBus.log_public.emit("💡 La lumière revient…")
+
+## Trois éclairs qui blanchissent la salle, avec le tonnerre.
+func _event_storm() -> void:
+	var ambient := _env.ambient_light_energy
+	for i in 3:
+		_env.ambient_light_energy = 2.8
+		Audio.play("thunder", -4.0 - i * 2.0)
+		await get_tree().create_timer(0.1).timeout
+		_env.ambient_light_energy = ambient
+		await get_tree().create_timer(randf_range(0.3, 0.9)).timeout
+		if not is_inside_tree():
+			return
+
+## Une pluie de poulets physiques. Parce que pourquoi pas.
+func _event_chicken_rain() -> void:
+	for i in 8:
+		var chicken := RigidBody3D.new()
+		chicken.mass = 0.3
+		var shape := CollisionShape3D.new()
+		var sphere := SphereShape3D.new()
+		sphere.radius = 0.14
+		shape.shape = sphere
+		chicken.add_child(shape)
+		var body := MeshInstance3D.new()
+		var body_mesh := SphereMesh.new()
+		body_mesh.radius = 0.14
+		body_mesh.height = 0.26
+		body.mesh = body_mesh
+		var feathers := StandardMaterial3D.new()
+		feathers.albedo_color = Color(0.95, 0.93, 0.88)
+		body.material_override = feathers
+		chicken.add_child(body)
+		var beak := MeshInstance3D.new()
+		var beak_mesh := CylinderMesh.new()
+		beak_mesh.top_radius = 0.001
+		beak_mesh.bottom_radius = 0.04
+		beak_mesh.height = 0.09
+		beak.mesh = beak_mesh
+		var beak_mat := StandardMaterial3D.new()
+		beak_mat.albedo_color = Color(0.95, 0.6, 0.15)
+		beak.material_override = beak_mat
+		beak.position = Vector3(0, 0.02, -0.15)
+		beak.rotation_degrees = Vector3(-90, 0, 0)
+		chicken.add_child(beak)
+		add_child(chicken)
+		var drop_angle := randf() * TAU
+		var drop_radius := randf_range(0.5, 4.5)
+		chicken.global_position = Vector3(sin(drop_angle) * drop_radius, randf_range(3.6, 4.3),
+			cos(drop_angle) * drop_radius)
+		chicken.angular_velocity = Vector3(randf_range(-6, 6), randf_range(-6, 6), randf_range(-6, 6))
+		if i % 3 == 0:
+			Audio.play_at("poule", chicken.global_position, -4.0)
+		# Chaque poulet repart comme il est venu, six secondes plus tard.
+		get_tree().create_timer(6.0 + i * 0.2).timeout.connect(chicken.queue_free)
+		await get_tree().create_timer(randf_range(0.1, 0.35)).timeout
+		if not is_inside_tree():
+			return
+
+## La caméra locale tremble — où qu'elle soit (assis, debout, spectateur).
+func _event_table_shake() -> void:
+	Audio.play("thunder", -6.0)
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		return
+	var tween := create_tween()
+	for i in 8:
+		tween.tween_property(camera, "v_offset", 0.05 if i % 2 == 0 else -0.05, 0.05)
+	tween.tween_property(camera, "v_offset", 0.0, 0.08)
 
 ## La fleur unique est cueillie : toutes les autres se fanent aussitôt.
 func _on_flower_picked(_character) -> void:
