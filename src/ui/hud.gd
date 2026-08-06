@@ -361,11 +361,29 @@ func _build_end_screen(winner) -> void:
 	box.add_theme_constant_override("separation", 12)
 	panel.add_child(box)
 
+	# Mode Enchaînés : la victoire peut être PARTAGÉE par toute la chaîne
+	# survivante — tous les vivants de la fin sont vainqueurs.
+	var winners: Array = []
+	if winner != null:
+		winners.append(winner)
+		if GameConfig.mode == "chains":
+			for character in Net.characters:
+				if is_instance_valid(character) and character.is_alive() \
+						and not character in winners:
+					winners.append(character)
+
 	var title := Label.new()
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 32)
 	title.add_theme_color_override("font_color", Color(0.95, 0.85, 0.45))
-	if winner == local_player:
+	if winners.size() > 1:
+		var names: Array[String] = []
+		for character in winners:
+			names.append(character.display_name)
+		title.text = "⛓️🏆 %s remportent la partie ENSEMBLE !" % " & ".join(names)
+		if local_player in winners:
+			title.text += "\n(et TU en fais partie !)"
+	elif winner == local_player:
 		title.text = "🏆 TU remportes la Dernière Carte !"
 	elif winner != null:
 		title.text = "🏆 %s remporte la Dernière Carte !" % winner.display_name
@@ -375,14 +393,14 @@ func _build_end_screen(winner) -> void:
 
 	box.add_child(HSeparator.new())
 
-	# Classement : le vainqueur d'abord, puis les autres par audace décroissante.
+	# Classement : les vainqueurs d'abord, puis les autres par audace décroissante.
 	var ranked: Array = []
 	for character in Net.characters:
-		if is_instance_valid(character) and character != winner:
+		if is_instance_valid(character) and not character in winners:
 			ranked.append(character)
 	ranked.sort_custom(func(a, b) -> bool: return a.points > b.points)
-	if winner != null:
-		ranked.push_front(winner)
+	for i in range(winners.size() - 1, -1, -1):
+		ranked.push_front(winners[i])
 	var medals := ["🥇", "🥈", "🥉"]
 	var rows: Array[Control] = []
 	for i in ranked.size():

@@ -99,16 +99,17 @@ func _ready() -> void:
 		_deck_material.emission_enabled = false)
 
 	# En réseau : enregistre les personnages (relais d'événements / marionnettes).
+	# En solo : référence directe (audio, écran de fin…). TOUJOURS renseigné.
 	if Net.active:
 		Net.match_begin(characters)
+	else:
+		Net.characters = characters
 
 	# Mode Les Enchaînés : appariement secret, uniquement chez l'hôte.
 	if GameConfig.mode == "chains" and Net.is_server:
 		var chains := preload("res://src/core/chain_mode.gd").new()
 		add_child(chains)
 		chains.setup(characters)
-	else:
-		Net.characters = characters  # référence aussi utile en solo (audio, etc.).
 
 	# Menu pause (Échap) : options et sorties — la partie continue derrière.
 	add_child(preload("res://src/ui/pause_menu.gd").new())
