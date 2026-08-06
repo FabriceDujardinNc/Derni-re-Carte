@@ -11,10 +11,11 @@ const PLAYER_COLORS: Array[Color] = [
 
 ## Version affichée au menu ET vérifiée à la connexion réseau : deux versions
 ## différentes ne peuvent pas jouer ensemble (protocole incompatible).
-const VERSION := "v0.5-alpha"
+const VERSION := "v0.6-alpha"
 
 var player_name := "Player"
 var mode := "ffa"  ## "ffa" (chacun pour soi) ou "chains" (Les Enchaînés, paires secrètes).
+var difficulty := "moyen"  ## facile · moyen · difficile · nightmare · celeste.
 var player_count := 8   ## 2 à 8 (design : 4-8, mais 2-3 utiles pour tester).
 var color_index := 0    ## Couleur du joueur local dans PLAYER_COLORS.
 var tutorial_done := false  ## Tutoriel déjà lu cette session : on ne le remontre pas.

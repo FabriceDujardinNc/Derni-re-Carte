@@ -71,6 +71,8 @@ func _ready() -> void:
 				player_count = clampi(arg.get_slice("=", 1).to_int(), 2, 8)
 			elif arg.begins_with("mode="):
 				GameConfig.mode = arg.get_slice("=", 1)
+			elif arg.begins_with("difficulty="):
+				GameConfig.difficulty = arg.get_slice("=", 1)
 	# Les Enchaînés demandent au moins 4 joueurs (2 paires) pour avoir du sens.
 	if GameConfig.mode == "chains" and player_count < 4:
 		GameConfig.mode = "ffa"

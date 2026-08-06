@@ -178,11 +178,12 @@ func start_match_as_host(table_size: int) -> void:
 	while new_seats.size() < maxi(table_size, new_seats.size()) and bot_index < bot_names.size():
 		new_seats.append({"peer": -1, "name": bot_names[bot_index], "color": (new_seats.size()) % 8})
 		bot_index += 1
-	rpc_start_match.rpc(new_seats, GameConfig.mode)
+	rpc_start_match.rpc(new_seats, GameConfig.mode, GameConfig.difficulty)
 
 @rpc("authority", "call_local", "reliable")
-func rpc_start_match(new_seats: Array, mode: String) -> void:
-	GameConfig.mode = mode  # le mode choisi par l'hôte s'applique à tous.
+func rpc_start_match(new_seats: Array, mode: String, difficulty: String) -> void:
+	GameConfig.mode = mode  # le mode et la difficulté de l'hôte s'appliquent à tous.
+	GameConfig.difficulty = difficulty
 	seats = new_seats
 	var my_id := multiplayer.get_unique_id()
 	my_seat = 0

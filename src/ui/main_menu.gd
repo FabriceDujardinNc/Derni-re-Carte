@@ -13,6 +13,8 @@ var _password_edit: LineEdit
 var _error_label: Label
 var _mode_buttons := {}  ## "ffa" / "chains" -> Button
 var _selected_mode := "ffa"
+var _difficulty_buttons := {}
+var _selected_difficulty := "moyen"
 var _title: Label
 var _panel: PanelContainer
 var _joining := false
@@ -163,6 +165,30 @@ func _build_ui() -> void:
 	_selected_mode = GameConfig.mode
 	_refresh_mode_buttons()
 
+	# --- Difficulté des bots ---
+	form.add_child(_section_label("🤖  Difficulté des bots"))
+	var difficulty_row := HBoxContainer.new()
+	difficulty_row.add_theme_constant_override("separation", 6)
+	form.add_child(difficulty_row)
+	var difficulty_definitions := [
+		["facile", "😴 Facile"],
+		["moyen", "🙂 Moyen"],
+		["difficile", "😈 Difficile"],
+		["nightmare", "💀 Nightmare"],
+		["celeste", "🌟 Céleste"],
+	]
+	for definition in difficulty_definitions:
+		var difficulty_button := Button.new()
+		difficulty_button.text = definition[1]
+		difficulty_button.custom_minimum_size = Vector2(0, 36)
+		difficulty_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		UiKit.style_button(difficulty_button, UiKit.ACCENT_BLUE, 13)
+		difficulty_button.pressed.connect(_on_difficulty_selected.bind(definition[0]))
+		difficulty_row.add_child(difficulty_button)
+		_difficulty_buttons[definition[0]] = difficulty_button
+	_selected_difficulty = GameConfig.difficulty
+	_refresh_difficulty_buttons()
+
 	form.add_child(HSeparator.new())
 
 	# --- Solo ---
@@ -259,6 +285,14 @@ func _refresh_mode_buttons() -> void:
 	for mode in _mode_buttons:
 		_mode_buttons[mode].modulate.a = 1.0 if mode == _selected_mode else 0.45
 
+func _on_difficulty_selected(difficulty: String) -> void:
+	_selected_difficulty = difficulty
+	_refresh_difficulty_buttons()
+
+func _refresh_difficulty_buttons() -> void:
+	for difficulty in _difficulty_buttons:
+		_difficulty_buttons[difficulty].modulate.a = 1.0 if difficulty == _selected_difficulty else 0.4
+
 func _on_color_selected(index: int) -> void:
 	_selected_color = index
 	_refresh_color_buttons()
@@ -273,6 +307,7 @@ func _apply_settings() -> void:
 	GameConfig.player_count = int(_count_slider.value)
 	GameConfig.color_index = _selected_color
 	GameConfig.mode = _selected_mode
+	GameConfig.difficulty = _selected_difficulty
 
 func _show_error(message: String) -> void:
 	_error_label.add_theme_color_override("font_color", Color(1, 0.4, 0.35))

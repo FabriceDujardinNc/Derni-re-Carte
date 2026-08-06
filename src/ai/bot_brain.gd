@@ -9,6 +9,39 @@ extends Node
 
 enum Personality { MENTEUR, PEUREUX, AGRESSIF, CALCULATEUR, TROLL, PRUDENT }
 
+## Difficulté globale des bots : multiplicateurs de comportement.
+## aggro = fréquence d'attaque · think = vitesse de réaction (plus petit = plus vif)
+## spy = zèle d'espionnage · reveal = générosité en révélations (info gratuite)
+## suspicion = qualité de lecture · heal_at = seuil de soin (PV) · taunt = moqueries chat.
+const DIFFICULTY := {
+	"facile": {"aggro": 0.5, "think": 1.6, "spy": 0.5, "reveal": 1.6, "suspicion": 0.5, "heal_at": 30, "taunt": 0.0},
+	"moyen": {"aggro": 1.0, "think": 1.0, "spy": 1.0, "reveal": 1.0, "suspicion": 1.0, "heal_at": 45, "taunt": 0.0},
+	"difficile": {"aggro": 1.4, "think": 0.7, "spy": 1.3, "reveal": 0.6, "suspicion": 1.5, "heal_at": 55, "taunt": 0.06},
+	"nightmare": {"aggro": 1.9, "think": 0.45, "spy": 1.6, "reveal": 0.3, "suspicion": 2.0, "heal_at": 65, "taunt": 0.14},
+	"celeste": {"aggro": 2.6, "think": 0.3, "spy": 2.0, "reveal": 0.1, "suspicion": 3.0, "heal_at": 75, "taunt": 0.28},
+}
+
+const TAUNTS: Array[String] = [
+	"Rien de personnel.",
+	"Tu l'as bien cherché.",
+	"Le barman t'aurait fait pire.",
+	"C'était peut-être ton enchaîné ? Oups.",
+	"Ma grand-mère bluffe mieux que toi.",
+	"Tu trembles déjà ?",
+	"On applaudit bien fort.",
+	"Je vois TOUT.",
+]
+
+## Raccourci : paramètre de la difficulté courante.
+func _d(key: String) -> float:
+	var tier: Dictionary = DIFFICULTY.get(GameConfig.difficulty, DIFFICULTY["moyen"])
+	return float(tier[key])
+
+## Après un mauvais coup réussi : parfois, le bot savoure (dans le chat).
+func _maybe_taunt(_victim) -> void:
+	if randf() < _d("taunt"):
+		character.say(TAUNTS.pick_random())
+
 ## Probabilité d'afficher une émotion INVERSE de ce que le bot ressent.
 const BLUFF_CHANCE := {
 	Personality.MENTEUR: 0.85,
@@ -106,7 +139,7 @@ func _bump_suspicion(who, amount: float) -> void:
 	if who == null or who == character:
 		return
 	var key: int = who.get_instance_id()
-	_suspicion[key] = maxf(float(_suspicion.get(key, 0.0)) + amount, 0.0)
+	_suspicion[key] = maxf(float(_suspicion.get(key, 0.0)) + amount * _d("suspicion"), 0.0)
 
 ## Les gifles et cailloux signent leurs auteurs : le bot s'en souvient.
 func _on_someone_damaged(victim, _amount: int, source: String) -> void:
@@ -159,8 +192,8 @@ func _on_turn_started(who) -> void:
 		await character.seated
 		if not character.is_alive():
 			return
-	# Petit temps de "réflexion" pour rester crédible.
-	await get_tree().create_timer(randf_range(1.0, 2.0)).timeout
+	# Petit temps de "réflexion" — les bots durs réfléchissent VITE.
+	await get_tree().create_timer(randf_range(1.0, 2.0) * _d("think")).timeout
 	if not character.is_alive():
 		return
 	_maybe_use_stored_card()
@@ -185,7 +218,7 @@ func _spy_loop() -> void:
 		if character.health.hp < 95 and randf() < 0.12:
 			_drink_errand()
 			continue
-		if randf() >= float(SPY_CHANCE[personality]):
+		if randf() >= minf(float(SPY_CHANCE[personality]) * _d("spy"), 0.9):
 			continue
 		var targets := get_tree().get_nodes_in_group("characters").filter(
 			func(c) -> bool: return c != character and c.is_alive())
@@ -240,13 +273,14 @@ func _defense_loop() -> void:
 					continue
 			var acted := false
 			if distance <= 1.7:
-				if randf() < float(AGGRO_CHANCE[personality]):
+				if randf() < minf(float(AGGRO_CHANCE[personality]) * _d("aggro"), 0.95):
 					acted = character.try_slap(other)
-			elif randf() < float(AGGRO_CHANCE[personality]) * 0.08:
+			elif randf() < float(AGGRO_CHANCE[personality]) * 0.08 * _d("aggro"):
 				acted = character.throw_rock(other)
 			if acted:
-				# Temps de recharge : un bot ne mitraille jamais.
-				await get_tree().create_timer(randf_range(5.0, 9.0)).timeout
+				_maybe_taunt(other)
+				# Temps de recharge : un bot ne mitraille jamais (mais Céleste recharge vite).
+				await get_tree().create_timer(randf_range(5.0, 9.0) / maxf(_d("aggro"), 0.5)).timeout
 				break
 
 ## Le bot joue une carte de sa manche : soin s'il est mal en point,
@@ -256,16 +290,18 @@ func _maybe_use_stored_card() -> void:
 		var card: Dictionary = character.hand[i]
 		var heals: bool = card.get("effects", []).any(
 			func(e) -> bool: return e.get("type", "") == "heal")
-		if heals and character.health.hp <= 45:
+		if heals and character.health.hp <= int(_d("heal_at")):
 			character.use_card(i, character)
 			return
 		# Les grenades se lancent à tout moment — sur la cible la plus MÉRITANTE
 		# (suspicion accumulée + blessures apparentes), plus une part de hasard.
-		if card.get("targetable", false) and randf() < float(AGGRO_CHANCE[personality]):
+		if card.get("targetable", false) and randf() < minf(float(AGGRO_CHANCE[personality]) * _d("aggro"), 0.95):
 			var victims := get_tree().get_nodes_in_group("characters").filter(
 				func(c) -> bool: return c != character and c.is_alive())
 			if not victims.is_empty():
-				character.use_card(i, _pick_victim(victims))
+				var victim = _pick_victim(victims)
+				character.use_card(i, victim)
+				_maybe_taunt(victim)
 			return
 
 func _on_card_drawn(who, card: Dictionary) -> void:
@@ -275,8 +311,8 @@ func _on_card_drawn(who, card: Dictionary) -> void:
 		await get_tree().create_timer(randf_range(0.6, 1.8)).timeout
 		if character.is_alive():
 			character.play_emote(_pick_reaction(card))
-			# Parfois, le bot joue la transparence : carte révélée, point empoché.
-			if randf() < float(REVEAL_CHANCE[personality]):
+			# Parfois, le bot joue la transparence — les durs, presque jamais.
+			if randf() < float(REVEAL_CHANCE[personality]) * _d("reveal"):
 				await get_tree().create_timer(randf_range(0.3, 0.8)).timeout
 				if character.is_alive():
 					character.reveal_card()

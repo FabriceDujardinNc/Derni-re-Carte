@@ -78,3 +78,5 @@ func _ready() -> void:
 	card_used.connect(func(user, card: Dictionary, target) -> void:
 		print("💥 %s utilise %s%s" % [user.display_name, card.get("name", "?"),
 			" → " + target.display_name if target != null and target != user else ""]))
+	chat_message.connect(func(character, text: String) -> void:
+		print("💬 %s : %s" % [character.display_name, text]))
