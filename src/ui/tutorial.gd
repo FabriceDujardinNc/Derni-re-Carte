@@ -27,7 +27,7 @@ const PAGES := [
 	},
 	{
 		"title": "👀 Debout, tout se paie",
-		"text": "E : se lever · ZQSD : marcher. Va lire les cartes et les sacs par-derrière !\nMais debout, tu peux être GIFLÉ à portée de bras et CAILLASSÉ de loin.\nEt si tu tardes trop à piocher… LAPIDATION générale autorisée. 🪨",
+		"text": "E : se lever · ZQSD : marcher. Lis les cartes et les sacs par-derrière — ou clique un SAC pour tenter un VOL (crochetage) ! S'il se retourne : flagrant délit.\nDebout, tu peux être GIFLÉ, CAILLASSÉ… et si tu tardes à piocher : LAPIDATION. 🪨",
 		"targets": ["rocks"],
 	},
 	{

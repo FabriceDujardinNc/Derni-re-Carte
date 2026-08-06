@@ -262,6 +262,12 @@ func _install_server_relay() -> void:
 		_bcast("dir", {"n": event_name}))
 	EventBus.chat_message.connect(func(c, text: String) -> void:
 		_bcast("chat", {"s": seat_of(c), "m": text}))
+	EventBus.steal_started.connect(func(thief, victim) -> void:
+		_bcast("sst", {"s": seat_of(thief), "v": seat_of(victim)}))
+	EventBus.steal_ended.connect(func(victim) -> void:
+		_bcast("sse", {"v": seat_of(victim)}))
+	EventBus.card_stolen.connect(func(thief, victim, card: Dictionary) -> void:
+		_bcast("stolen", {"s": seat_of(thief), "v": seat_of(victim), "card": card}))
 	# État de santé : synchronisation par personnage.
 	for i in characters.size():
 		var seat := i
@@ -336,6 +342,18 @@ func net_event(type: String, data: Dictionary) -> void:
 		"chat":
 			if int(data["s"]) != my_seat:  # son propre message est déjà affiché.
 				c.say(data["m"])
+		"sst":
+			EventBus.steal_started.emit(c, _char(int(data.get("v", -1))))
+		"sse":
+			EventBus.steal_ended.emit(_char(int(data.get("v", -1))))
+		"stolen":
+			var robbed = _char(int(data.get("v", -1)))
+			if robbed != null:
+				_remove_from_hand(robbed, data["card"])
+				robbed._refresh_bag()
+			c.hand.append(data["card"])
+			c._refresh_bag()
+			EventBus.card_stolen.emit(c, robbed, data["card"])
 		"tuto_wait":
 			EventBus.tutorial_waiting.emit(data["names"])
 		"tuto_go":
@@ -438,6 +456,46 @@ func send_drink() -> void:
 
 func send_chat(text: String) -> void:
 	input_chat.rpc_id(1, text)
+
+# --- Vol à la tire ---
+
+func send_steal_start(victim_seat: int) -> void:
+	input_steal_start.rpc_id(1, victim_seat)
+
+func send_steal_end(victim_seat: int) -> void:
+	input_steal_end.rpc_id(1, victim_seat)
+
+func send_steal_finish(victim_seat: int, card_index: int) -> void:
+	input_steal_finish.rpc_id(1, victim_seat, card_index)
+
+func send_steal_caught() -> void:
+	input_steal_caught.rpc_id(1)
+
+@rpc("any_peer", "call_remote", "reliable")
+func input_steal_start(victim_seat: int) -> void:
+	var thief = _char(_seat_of_sender())
+	var victim = _char(victim_seat)
+	if is_server and thief != null and victim != null:
+		EventBus.steal_started.emit(thief, victim)
+
+@rpc("any_peer", "call_remote", "reliable")
+func input_steal_end(victim_seat: int) -> void:
+	var victim = _char(victim_seat)
+	if is_server and victim != null:
+		EventBus.steal_ended.emit(victim)
+
+@rpc("any_peer", "call_remote", "reliable")
+func input_steal_finish(victim_seat: int, card_index: int) -> void:
+	var thief = _char(_seat_of_sender())
+	var victim = _char(victim_seat)
+	if is_server and thief != null and victim != null:
+		thief.steal_card_from(victim, card_index)
+
+@rpc("any_peer", "call_remote", "reliable")
+func input_steal_caught() -> void:
+	var thief = _char(_seat_of_sender())
+	if is_server and thief != null:
+		thief.health.take_damage(8, "Pris la main dans le sac")
 
 @rpc("any_peer", "call_remote", "reliable")
 func input_chat(text: String) -> void:

@@ -58,6 +58,12 @@ signal projectile_thrown(from: Vector3, to: Vector3) ## Visuel de lancer (répli
 signal chain_echo(character)                      ## Mode Enchaînés : le partenaire a encaissé (tressaillement VISIBLE).
 signal director_event(event_name: String)         ## Game Director : coupure, orage, poulets… (répliqué).
 signal chat_message(character, text: String)      ## Message écrit : journal + bulle au-dessus du joueur.
+signal steal_started(thief, victim)               ## Tentative de vol de sac en cours (crochetage).
+signal steal_ended(victim)                        ## Fin de tentative (réussite, échec ou fuite).
+signal card_stolen(thief, victim, card: Dictionary) ## Une carte a changé de sac.
+
+## Vrai pendant le mini-jeu de crochetage (entrées gameplay coupées).
+var steal_open := false
 
 ## Vrai pendant la saisie d'un message (T) : les touches gameplay sont coupées.
 var chat_open := false

@@ -123,6 +123,7 @@ func _ready() -> void:
 		if who == character:
 			_my_turn = false)
 	EventBus.stalling_started.connect(_on_stalling_started)
+	EventBus.steal_started.connect(_on_steal_attempt)
 	# Lecture de la table.
 	EventBus.card_stored.connect(func(who, _card: Dictionary) -> void:
 		_bump_suspicion(who, 1.0))  # il prépare un mauvais coup.
@@ -165,6 +166,20 @@ func _pick_victim(candidates: Array):
 			best_score = score
 			best = candidate
 	return best
+
+## On fouille MON sac ?! Le bot se retourne (flagrant délit) puis gifle.
+func _on_steal_attempt(thief, victim) -> void:
+	if victim != character or not character.is_alive() or thief == null:
+		return
+	await get_tree().create_timer(randf_range(0.8, 2.0) * _d("think")).timeout
+	if not character.is_alive() or not is_instance_valid(thief):
+		return
+	character.look_at(Vector3(thief.global_position.x, 0, thief.global_position.z))
+	character.play_emote("😤")
+	_bump_suspicion(thief, 6.0)
+	await get_tree().create_timer(0.4).timeout
+	if character.is_alive() and is_instance_valid(thief):
+		character.try_slap(thief)
 
 ## Quelqu'un fait poireauter la table : on le caillasse jusqu'à ce qu'il pioche.
 func _on_stalling_started(lambin) -> void:

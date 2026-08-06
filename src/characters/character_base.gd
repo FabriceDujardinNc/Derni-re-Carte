@@ -477,6 +477,18 @@ func _build_bag() -> void:
 		strap_visual.rotation_degrees = Vector3(38, 0, 0)
 		add_child(strap_visual)
 
+	# Le sac est CLIQUABLE par-derrière : c'est la cible du vol à la tire.
+	var bag_body := StaticBody3D.new()
+	bag_body.add_to_group("character_bag")
+	bag_body.set_meta("character", self)
+	var bag_shape := CollisionShape3D.new()
+	var bag_box := BoxShape3D.new()
+	bag_box.size = Vector3(0.52, 0.62, 0.2)
+	bag_shape.shape = bag_box
+	bag_shape.position = Vector3(0, 1.05, 0.47)
+	bag_body.add_child(bag_shape)
+	add_child(bag_body)
+
 	# Poche transparente à l'arrière.
 	var pocket := BoxMesh.new()
 	pocket.size = Vector3(0.42, 0.5, 0.015)
@@ -540,6 +552,29 @@ func _refresh_bag() -> void:
 			(mini.get_node("Titre") as Label3D).text = hand[i].get("name", "")
 		else:
 			mini.visible = false
+
+# ---------------------------------------------------------------- Le vol
+
+## Transfère UNE carte du sac de la victime vers le sien (autorité seulement).
+## L'annonce publique est ANONYME : à la table de deviner qui a fait le coup.
+func steal_card_from(victim, index: int) -> void:
+	if not is_alive() or victim == null or not is_instance_valid(victim) or not victim.is_alive():
+		return
+	if index < 0 or index >= victim.hand.size() or hand.size() >= HAND_SIZE:
+		return
+	if global_position.distance_to(victim.global_position) > 3.0:
+		return
+	var card: Dictionary = victim.hand[index]
+	victim.hand.remove_at(index)
+	victim._refresh_bag()
+	hand.append(card)
+	_refresh_bag()
+	EventBus.card_stolen.emit(self, victim, card)
+	EventBus.log_public.emit("🫳 Une carte a été dérobée dans le sac de %s !" % victim.display_name)
+	EventBus.log_private.emit(self, "🫳 Volé : %s %s. Personne ne t'a vu… normalement."
+		% [card.get("emoji", ""), card.get("name", "?")])
+	EventBus.log_private.emit(victim, "❗ On t'a volé : %s %s !"
+		% [card.get("emoji", ""), card.get("name", "?")])
 
 # ---------------------------------------------------------------- La fleur
 

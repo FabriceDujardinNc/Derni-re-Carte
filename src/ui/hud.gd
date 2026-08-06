@@ -39,6 +39,8 @@ var _chat_input: LineEdit
 var _last_chat_ms := 0
 var _alert_label: Label
 var _alert_tween: Tween
+var _theft_label: Label
+var _theft_tween: Tween
 var _timer_label: Label
 var _timer_running := false
 var _timer_elapsed := 0.0
@@ -63,6 +65,11 @@ func _ready() -> void:
 	EventBus.countdown_tick.connect(_on_countdown_tick)
 	EventBus.chat_message.connect(_on_chat_message)
 	EventBus.chain_echo.connect(_on_chain_echo)
+	EventBus.steal_started.connect(_on_steal_started)
+	EventBus.steal_ended.connect(_on_steal_ended)
+	EventBus.card_stolen.connect(func(thief, victim, _card: Dictionary) -> void:
+		if thief == local_player or victim == local_player:
+			_refresh_hand())
 	EventBus.points_changed.connect(func(c, points: int) -> void:
 		if c == local_player:
 			_points_label.text = "⭐ %d point%s d'audace" % [points, "s" if points > 1 else ""])
@@ -204,6 +211,20 @@ func _build_ui() -> void:
 	_draw_prompt.add_theme_constant_override("shadow_offset_y", 3)
 	_draw_prompt.visible = false
 	root.add_child(_draw_prompt)
+
+	# ⚠️ Warning de vol : quelqu'un fouille TON sac.
+	_theft_label = Label.new()
+	_theft_label.text = "⚠️ QUELQU'UN FOUILLE TON SAC !! ⚠️"
+	_theft_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_theft_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	_theft_label.offset_top = 150
+	_theft_label.offset_bottom = 195
+	_theft_label.add_theme_font_size_override("font_size", 30)
+	_theft_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.2))
+	_theft_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+	_theft_label.add_theme_constant_override("shadow_offset_y", 3)
+	_theft_label.visible = false
+	root.add_child(_theft_label)
 
 	# ☠️ Compte à rebours de mort subite, en haut à gauche.
 	_timer_label = Label.new()
@@ -596,6 +617,29 @@ func _on_chat_submitted(text: String) -> void:
 
 func _on_chat_message(character, text: String) -> void:
 	_add_log("💬 %s : %s" % [character.display_name, text], character.color.lightened(0.35))
+
+# ---------------------------------------------------------------- Vol à la tire
+
+## Quelqu'un crochète TON sac : gros warning rouge pulsant + alarme.
+## Retourne-toi pour le surprendre (il prendra des dégâts) ou gifle-le !
+func _on_steal_started(_thief, victim) -> void:
+	if victim != local_player:
+		return
+	_theft_label.visible = true
+	Audio.play("alarm", -4.0)
+	if _theft_tween and _theft_tween.is_valid():
+		_theft_tween.kill()
+	_theft_tween = create_tween().set_loops()
+	_theft_tween.tween_property(_theft_label, "modulate:a", 0.35, 0.25)
+	_theft_tween.tween_property(_theft_label, "modulate:a", 1.0, 0.25)
+
+func _on_steal_ended(victim) -> void:
+	if victim != local_player:
+		return
+	if _theft_tween and _theft_tween.is_valid():
+		_theft_tween.kill()
+	_theft_label.visible = false
+	_theft_label.modulate.a = 1.0
 
 # ---------------------------------------------------------------- Mort subite
 

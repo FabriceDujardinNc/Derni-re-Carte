@@ -56,8 +56,8 @@ func _update_orbit() -> void:
 	camera.look_at(target)
 
 func _unhandled_input(event: InputEvent) -> void:
-	# Menu pause ou chat ouverts : aucune entrée gameplay.
-	if EventBus.pause_open or EventBus.chat_open:
+	# Menu pause, chat ou crochetage ouverts : aucune entrée gameplay.
+	if EventBus.pause_open or EventBus.chat_open or EventBus.steal_open:
 		return
 
 	# Si la souris s'est échappée de la fenêtre, un clic la verrouille à nouveau.
@@ -128,7 +128,10 @@ func _unhandled_input(event: InputEvent) -> void:
 					var ball = _aimed_ball()
 					var barman = _aimed_barman()
 					var victim = _aimed_character()
-					if ball != null:
+					var bag_owner = _aimed_bag()
+					if bag_owner != null and bag_owner != character:
+						_try_steal(bag_owner)
+					elif ball != null:
 						# Billard : frappe dans la direction du regard.
 						var direction := -camera.global_basis.z
 						if Net.client_mode():
@@ -181,7 +184,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 
 func _process(delta: float) -> void:
-	if not character.is_alive() or EventBus.pause_open or EventBus.chat_open:
+	if not character.is_alive() or EventBus.pause_open or EventBus.chat_open \
+			or EventBus.steal_open:
 		return
 	# L'espionnage est GÉOMÉTRIQUE : assis ou debout, on lit la manche de
 	# quiconque nous montre son dos d'assez près.
@@ -299,6 +303,30 @@ func _aimed_ball():
 	if hit.collider is RigidBody3D and hit.collider.is_in_group("billiard_ball"):
 		return hit.collider
 	return null
+
+## Le sac visé (par-derrière, tout près) : cible du vol à la tire.
+func _aimed_bag():
+	var hit := _raycast_from_camera(2.2)
+	if hit.is_empty() or not hit.collider.is_in_group("character_bag"):
+		return null
+	return hit.collider.get_meta("character")
+
+## Lance le crochetage si les conditions du vol sont réunies.
+func _try_steal(target) -> void:
+	if not EventBus.match_started:
+		return
+	if character.is_seated:
+		EventBus.log_private.emit(character, "🫳 Lève-toi (E) pour tenter un vol.")
+		return
+	if target.hand.is_empty():
+		EventBus.log_private.emit(character, "🫳 Le sac de %s est vide." % target.display_name)
+		return
+	if character.hand.size() >= CharacterBase.HAND_SIZE:
+		EventBus.log_private.emit(character, "🫳 Ton propre sac est plein !")
+		return
+	var minigames := get_tree().get_nodes_in_group("steal_minigame")
+	if not minigames.is_empty():
+		minigames[0].begin(character, target)
 
 ## Vise-t-on un pot de fleurs, d'assez près pour cueillir ?
 func _is_aiming_at_pot() -> bool:

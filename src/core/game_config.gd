@@ -11,7 +11,7 @@ const PLAYER_COLORS: Array[Color] = [
 
 ## Version affichée au menu ET vérifiée à la connexion réseau : deux versions
 ## différentes ne peuvent pas jouer ensemble (protocole incompatible).
-const VERSION := "v0.7-alpha"
+const VERSION := "v0.8-alpha"
 
 var player_name := "Player"
 var mode := "ffa"  ## "ffa" (chacun pour soi) ou "chains" (Les Enchaînés, paires secrètes).
