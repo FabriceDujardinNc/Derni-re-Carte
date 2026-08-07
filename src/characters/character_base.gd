@@ -82,8 +82,8 @@ const ARM_REST := 50.0    # posés vers la table
 const ARM_RAISED := 112.0 # main devant le visage (lecture de carte)
 
 ## Position de la carte tenue : au repos (posée devant soi) et levée (devant le visage).
-const CARD_REST_POS := Vector3(0.28, 0.9, -0.42)
-const CARD_RAISED_POS := Vector3(0.2, 1.25, -0.45)
+const CARD_REST_POS := Vector3(0.35, 1.13, -0.53)
+const CARD_RAISED_POS := Vector3(0.25, 1.56, -0.56)
 
 ## Le modèle Blender (assets/models/avatar_test.glb). Éditable dans Blender
 ## tant que les NOMS d'objets sont conservés (Body, Head, ArmL/R, HandL/R…).
@@ -107,6 +107,8 @@ var _overhead_visible := true
 var _shoulder_l: Node3D
 var _shoulder_r: Node3D
 var _hand_r: Node3D
+var _legs: Array[Node3D] = []
+var _feet: Array[Node3D] = []
 var _card_visual: Node3D
 
 var _emote_tween: Tween
@@ -166,7 +168,7 @@ func _build_visuals() -> void:
 	_name_label.font_size = 48
 	_name_label.pixel_size = 0.004
 	_name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_name_label.position = Vector3(0, 1.95, 0)  # au-dessus des chapeaux.
+	_name_label.position = Vector3(0, 2.45, 0)  # au-dessus des chapeaux.
 	_name_label.modulate = color.lightened(0.4)
 	add_child(_name_label)
 
@@ -175,7 +177,7 @@ func _build_visuals() -> void:
 	_emote_label.font_size = 110
 	_emote_label.pixel_size = 0.004
 	_emote_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_emote_label.position = Vector3(0, 2.3, 0)
+	_emote_label.position = Vector3(0, 2.9, 0)
 	add_child(_emote_label)
 
 	# Le rappel de tour flotte au-dessus du joueur qui doit piocher : toute la
@@ -186,14 +188,14 @@ func _build_visuals() -> void:
 	_turn_marker.font_size = 64
 	_turn_marker.pixel_size = 0.005
 	_turn_marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_turn_marker.position = Vector3(0, 2.6, 0)
+	_turn_marker.position = Vector3(0, 3.25, 0)
 	_turn_marker.modulate = Color(1.0, 0.85, 0.3)
 	_turn_marker.visible = false
 	add_child(_turn_marker)
 
 	# La fleur : portée en main gauche, ou arborée sur la tête une fois offerte.
 	_carried_flower = _build_flower(_shoulder_l.get_node("Hand"), Vector3(0, -0.1, 0))
-	_worn_flower = _build_flower(_head_pivot, Vector3(0.19, 0.22, -0.06))
+	_worn_flower = _build_flower(_head_pivot, Vector3(0.24, 0.28, -0.08))
 
 	# Le sac à dos et sa poche transparente : les cartes gardées y sont
 	# RANGÉES EN VRAC, visibles de quiconque regarde ton dos. L'espionnage
@@ -210,7 +212,7 @@ func _build_visuals() -> void:
 	_chat_bubble.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_chat_bubble.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_chat_bubble.outline_size = 14
-	_chat_bubble.position = Vector3(0, 2.55, 0)
+	_chat_bubble.position = Vector3(0, 3.2, 0)
 	add_child(_chat_bubble)
 
 	# 🎤 au-dessus de la tête pendant qu'il parle (lire QUI parle = gameplay).
@@ -220,7 +222,7 @@ func _build_visuals() -> void:
 	_talk_icon.font_size = 64
 	_talk_icon.pixel_size = 0.004
 	_talk_icon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_talk_icon.position = Vector3(0.4, 1.95, 0)
+	_talk_icon.position = Vector3(0.5, 2.45, 0)
 	_talk_icon.visible = false
 	add_child(_talk_icon)
 
@@ -230,10 +232,10 @@ func _build_visuals() -> void:
 	collision_body.set_meta("character", self)
 	var shape := CollisionShape3D.new()
 	var capsule_shape := CapsuleShape3D.new()
-	capsule_shape.radius = 0.35
-	capsule_shape.height = 1.6
+	capsule_shape.radius = 0.42
+	capsule_shape.height = 2.0
 	shape.shape = capsule_shape
-	shape.position = Vector3(0, 0.8, 0)
+	shape.position = Vector3(0, 1.0, 0)
 	collision_body.add_child(shape)
 	add_child(collision_body)
 
@@ -275,14 +277,25 @@ func _setup_avatar() -> void:
 	# Ancre des chapeaux : posée sur le sommet du crâne, légèrement réduite
 	# pour s'adapter à la tête du modèle.
 	_hat_anchor = Node3D.new()
-	_hat_anchor.position = Vector3(0, 0.30, 0)
-	_hat_anchor.scale = Vector3.ONE * 0.85
+	_hat_anchor.position = Vector3(0, 0.38, 0)
+	_hat_anchor.scale = Vector3.ONE * 0.9
 	_head_pivot.add_child(_hat_anchor)
 
 	# Épaules animables : les bras du modèle passent sous des pivots.
 	_shoulder_l = _make_shoulder(avatar, "L", -1.0)
 	_shoulder_r = _make_shoulder(avatar, "R", 1.0)
 	_hand_r = _shoulder_r.get_node("Hand")
+
+	# Jambes/pieds : origine à la HANCHE (jambes) et à la cheville (pieds),
+	# pour pouvoir les plier en position assise.
+	for suffix in ["L", "R"]:
+		var leg: Node3D = avatar.find_child("Leg" + suffix, true, false)
+		var foot: Node3D = avatar.find_child("Foot" + suffix, true, false)
+		if leg != null:
+			_legs.append(leg)
+		if foot != null:
+			_feet.append(foot)
+	_apply_seat_pose()
 
 ## Crée un pivot d'épaule et y rattache le bras + la main du modèle.
 ## L'origine de "ArmX" dans Blender EST l'articulation de l'épaule.
@@ -322,12 +335,12 @@ func _build_accessories() -> void:
 	brow_mat.albedo_color = Color(0.08, 0.08, 0.1)
 	for side in [-1.0, 1.0]:
 		var brow := BoxMesh.new()
-		brow.size = Vector3(0.09, 0.024, 0.02)
+		brow.size = Vector3(0.11, 0.03, 0.025)
 		# Posés juste au-dessus des grands yeux du modèle (repère : pivot de tête).
 		var mesh := MeshInstance3D.new()
 		mesh.mesh = brow
 		mesh.material_override = brow_mat
-		mesh.position = Vector3(0.082 * side, 0.30, -0.17)
+		mesh.position = Vector3(0.103 * side, 0.375, -0.213)
 		mesh.rotation_degrees = Vector3(0, 0, 8.0 * side)
 		_head_pivot.add_child(mesh)
 
@@ -543,21 +556,21 @@ func _build_bag() -> void:
 	leather.roughness = 1.0
 
 	var bag := BoxMesh.new()
-	bag.size = Vector3(0.36, 0.42, 0.14)
+	bag.size = Vector3(0.45, 0.52, 0.18)
 	var bag_visual := MeshInstance3D.new()
 	bag_visual.mesh = bag
 	bag_visual.material_override = leather
-	bag_visual.position = Vector3(0, 0.82, 0.26)
+	bag_visual.position = Vector3(0, 1.02, 0.33)
 	add_child(bag_visual)
 
 	# Sangles sur les épaules.
 	for side in [-1.0, 1.0]:
 		var strap := BoxMesh.new()
-		strap.size = Vector3(0.05, 0.3, 0.26)
+		strap.size = Vector3(0.06, 0.38, 0.33)
 		var strap_visual := MeshInstance3D.new()
 		strap_visual.mesh = strap
 		strap_visual.material_override = leather
-		strap_visual.position = Vector3(0.13 * side, 1.0, 0.1)
+		strap_visual.position = Vector3(0.16 * side, 1.25, 0.13)
 		strap_visual.rotation_degrees = Vector3(38, 0, 0)
 		add_child(strap_visual)
 
@@ -567,29 +580,29 @@ func _build_bag() -> void:
 	bag_body.set_meta("character", self)
 	var bag_shape := CollisionShape3D.new()
 	var bag_box := BoxShape3D.new()
-	bag_box.size = Vector3(0.42, 0.48, 0.18)
+	bag_box.size = Vector3(0.52, 0.6, 0.22)
 	bag_shape.shape = bag_box
-	bag_shape.position = Vector3(0, 0.82, 0.28)
+	bag_shape.position = Vector3(0, 1.02, 0.35)
 	bag_body.add_child(bag_shape)
 	add_child(bag_body)
 
 	# Poche transparente à l'arrière.
 	var pocket := BoxMesh.new()
-	pocket.size = Vector3(0.32, 0.38, 0.015)
+	pocket.size = Vector3(0.4, 0.48, 0.015)
 	var pocket_visual := MeshInstance3D.new()
 	pocket_visual.mesh = pocket
 	var pocket_mat := StandardMaterial3D.new()
 	pocket_mat.albedo_color = Color(0.75, 0.85, 0.95, 0.22)
 	pocket_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	pocket_visual.material_override = pocket_mat
-	pocket_visual.position = Vector3(0, 0.82, 0.34)
+	pocket_visual.position = Vector3(0, 1.02, 0.42)
 	add_child(pocket_visual)
 
 	# Trois emplacements de mini-cartes, volontairement de travers.
 	var slots := [
-		[Vector3(-0.085, 0.88, 0.325), -14.0],
-		[Vector3(0.02, 0.78, 0.33), 9.0],
-		[Vector3(0.09, 0.89, 0.325), -5.0],
+		[Vector3(-0.106, 1.1, 0.406), -14.0],
+		[Vector3(0.025, 0.98, 0.413), 9.0],
+		[Vector3(0.113, 1.11, 0.406), -5.0],
 	]
 	for slot in slots:
 		var mini := Node3D.new()
@@ -598,7 +611,7 @@ func _build_bag() -> void:
 		mini.visible = false
 		add_child(mini)
 		var face := BoxMesh.new()
-		face.size = Vector3(0.14, 0.19, 0.008)
+		face.size = Vector3(0.17, 0.23, 0.008)
 		var face_visual := MeshInstance3D.new()
 		face_visual.mesh = face
 		var face_mat := StandardMaterial3D.new()
@@ -609,20 +622,20 @@ func _build_bag() -> void:
 		emoji.name = "Emoji"
 		emoji.font = GameFonts.emoji_font()
 		emoji.font_size = 30
-		emoji.pixel_size = 0.0018
-		emoji.position = Vector3(0, 0.033, 0.006)
+		emoji.pixel_size = 0.0022
+		emoji.position = Vector3(0, 0.04, 0.006)
 		mini.add_child(emoji)
 		var title := Label3D.new()
 		title.name = "Titre"
 		title.font = GameFonts.ui_font()
 		title.font_size = 11
-		title.pixel_size = 0.0015
+		title.pixel_size = 0.0018
 		title.width = 90.0
 		title.autowrap_mode = TextServer.AUTOWRAP_WORD
 		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		title.modulate = Color(0.15, 0.15, 0.2)
 		title.outline_size = 0
-		title.position = Vector3(0, -0.046, 0.006)
+		title.position = Vector3(0, -0.055, 0.006)
 		mini.add_child(title)
 		_bag_cards.append(mini)
 
@@ -644,9 +657,9 @@ func _refresh_bag() -> void:
 func set_team(team_index: int) -> void:
 	team = team_index
 	var band := CylinderMesh.new()
-	band.top_radius = 0.20
-	band.bottom_radius = 0.20
-	band.height = 0.10
+	band.top_radius = 0.25
+	band.bottom_radius = 0.25
+	band.height = 0.13
 	var band_visual := MeshInstance3D.new()
 	band_visual.mesh = band
 	var band_material := StandardMaterial3D.new()
@@ -655,7 +668,7 @@ func set_team(team_index: int) -> void:
 	band_material.emission = TEAM_COLORS[team_index]
 	band_material.emission_energy_multiplier = 0.4
 	band_visual.material_override = band_material
-	band_visual.position = Vector3(0, 0.84, 0)
+	band_visual.position = Vector3(0, 1.05, 0)
 	add_child(band_visual)
 	_name_label.text = "%s %s" % [TEAM_EMOJIS[team_index], display_name]
 	_name_label.modulate = TEAM_COLORS[team_index].lightened(0.35)
@@ -814,7 +827,7 @@ func look_at_point(world_point: Vector3) -> void:
 	_gaze_point = world_point
 
 func look_at_character(other: Node3D) -> void:
-	_gaze_point = other.global_position + Vector3(0, 1.15, 0)
+	_gaze_point = other.global_position + Vector3(0, 1.44, 0)
 
 # ---------------------------------------------------------------- Se lever / s'asseoir
 
@@ -823,11 +836,20 @@ func store_seat() -> void:
 	seat_position = position
 	seat_rotation = rotation.y
 
+## Assis : cuisses pliées vers la table, pieds escamotés (pas de genoux au
+## modèle — le plateau les cache, l'œil complète). Debout : jambes droites.
+func _apply_seat_pose() -> void:
+	for leg in _legs:
+		leg.rotation_degrees.x = -80.0 if is_seated else 0.0
+	for foot in _feet:
+		foot.visible = not is_seated
+
 ## Quitter sa chaise : action PUBLIQUE — tout le monde sait qu'un espion rôde.
 func stand_up() -> void:
 	if not is_seated or not is_alive():
 		return
 	is_seated = false
+	_apply_seat_pose()
 	position += global_basis.z * 0.4  # petit pas en arrière.
 	EventBus.player_stood_up.emit(self)
 	# En réseau client, le log arrive via l'hôte (sinon il apparaîtrait en double).
@@ -840,6 +862,7 @@ func sit_down() -> void:
 	position = seat_position
 	rotation = Vector3(0, seat_rotation, 0)
 	is_seated = true
+	_apply_seat_pose()
 	auto_moving = false
 	EventBus.player_sat_down.emit(self)
 	if not Net.client_mode():
@@ -963,7 +986,7 @@ func throw_rock(target) -> bool:
 	var damage := ROCK_DAMAGE if target.is_seated else ROCK_DAMAGE_STANDING
 	var thrower_name := display_name
 	Projectile.throw(get_tree().current_scene, rock_pile_position,
-		target.global_position + Vector3(0, 1.1, 0),
+		target.global_position + Vector3(0, 1.38, 0),
 		func() -> void:
 			if is_instance_valid(target):
 				target.health.take_damage(damage, Lang.t("Caillou de %s") % thrower_name))
@@ -1009,8 +1032,8 @@ func use_card(index: int, target) -> void:
 		_raise_card()
 		get_tree().create_timer(0.25).timeout.connect(_lower_card)
 		Projectile.throw(get_tree().current_scene,
-			global_position + Vector3(0, 1.25, 0),
-			target.global_position + Vector3(0, 1.0, 0),
+			global_position + Vector3(0, 1.56, 0),
+			target.global_position + Vector3(0, 1.25, 0),
 			func() -> void:
 				if is_instance_valid(target):
 					EffectExecutor.apply(target, card, self))

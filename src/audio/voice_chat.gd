@@ -127,7 +127,7 @@ func _get_speaker(seat: int, character: Node3D) -> Dictionary:
 	generator.buffer_length = 0.3
 	player.stream = generator
 	player.max_distance = 12.0
-	player.position = Vector3(0, 1.3, 0)
+	player.position = Vector3(0, 1.6, 0)
 	character.add_child(player)
 	player.play()
 	var speaker := {"player": player, "playback": player.get_stream_playback()}

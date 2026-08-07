@@ -75,6 +75,9 @@ func _ready() -> void:
 				GameConfig.difficulty = arg.get_slice("=", 1)
 			elif arg.begins_with("sd="):
 				GameConfig.sudden_death_seconds = arg.get_slice("=", 1).to_float()
+			elif arg.begins_with("shot="):
+				# Debug visuel : `-- shot=3` capture l'écran après 3 s puis quitte.
+				_schedule_screenshot(arg.get_slice("=", 1).to_float())
 	# Enchaînés et Équipes demandent au moins 4 joueurs pour avoir du sens.
 	if GameConfig.mode in ["chains", "teams"] and player_count < 4:
 		GameConfig.mode = "ffa"
@@ -172,6 +175,38 @@ func _ready() -> void:
 		Net.bcast_countdown(0)
 		await get_tree().create_timer(0.8).timeout
 		turn_manager.start_match(characters)
+
+## Debug : capture l'écran après un délai puis ferme le jeu (tests visuels).
+func _schedule_screenshot(delay: float) -> void:
+	# Un bot marche jusqu'à un point DEVANT le joueur local (regard caméra) :
+	# on vérifie l'avatar en mouvement, debout, de près.
+	await get_tree().create_timer(maxf(delay - 5.0, 0.5)).timeout
+	var walkers := get_tree().get_nodes_in_group("characters")
+	if walkers.size() > 1 and local_player != null:
+		walkers[1].spy_walk(local_player)
+	await get_tree().create_timer(minf(delay, 5.0)).timeout
+	# Caméra libre : vue extérieure du marcheur, en entier.
+	if walkers.size() > 1:
+		var debug_camera := Camera3D.new()
+		add_child(debug_camera)
+		var walker_position: Vector3 = walkers[1].global_position
+		debug_camera.global_position = walker_position \
+			+ (walker_position - Vector3.ZERO).normalized() * 2.5 + Vector3(0, 1.6, 0)
+		debug_camera.look_at(walker_position + Vector3(0, 1.0, 0))
+		debug_camera.current = true
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png("user://shot.png")
+	print("SCREENSHOT_OK ", ProjectSettings.globalize_path("user://shot.png"))
+	for character in get_tree().get_nodes_in_group("characters"):
+		print("== ", character.display_name, " root=", character.global_position,
+			" seated=", character.is_seated)
+		for child in character.get_children():
+			if child is Node3D:
+				print("   ", child.name, " g=", (child as Node3D).global_position)
+				for sub in child.get_children():
+					if sub is Node3D:
+						print("      ", sub.name, " g=", (sub as Node3D).global_position)
+	get_tree().quit()
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Fin de partie : R pour rejouer (mêmes réglages), M pour revenir au menu.
@@ -826,7 +861,7 @@ func _spawn_characters() -> Array:
 			character.set_gaze_enabled(false)
 			# Première personne : caméra À LA PLACE des yeux, tête masquée pour soi.
 			var camera := Camera3D.new()
-			camera.position = Vector3(0, 1.30, -0.02)
+			camera.position = Vector3(0, 1.62, -0.02)
 			camera.rotation_degrees = Vector3(-10, 0, 0)
 			character.add_child(camera)
 			camera.current = true

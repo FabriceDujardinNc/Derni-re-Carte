@@ -80,7 +80,7 @@ func save_progress() -> void:
 	config.set_value("progression", "audace_bank", audace_bank)
 	config.set_value("progression", "unlocked_hats", unlocked_hats)
 	config.set_value("progression", "selected_hat", selected_hat)
-	config.set_value("progression", "language", Lang.locale)
+	config.set_value("progression", "language", language)
 	config.save_encrypted_pass(SAVE_PATH, SAVE_KEY)
 
 ## Encaisse les points d'audace d'une partie dans la réserve.

@@ -21,17 +21,36 @@ HAIR = make_material("Hair", (0.18, 0.12, 0.09, 1.0), 0.9)
 EYE = make_material("Eye", (0.97, 0.97, 0.95, 1.0), 0.25)
 PUPIL = make_material("Pupil", (0.06, 0.05, 0.08, 1.0), 0.2)
 
+# Échelle globale : le décor du jeu (table, chaises, bar) est taillé pour des
+# personnages d'environ 1,90 m. Toutes les cotes ci-dessous sont pensées à
+# 1,50 m puis multipliées par S à la construction.
+S = 1.25
+
+def chain(balls):
+    """Insère une boule à mi-chemin entre chaque paire consécutive : garantit
+    que les membres fusionnent en un volume continu (sinon, chapelet de boules
+    séparées à l'export — bras et jambes en morceaux dans le jeu)."""
+    filled = []
+    for i, (co, radius) in enumerate(balls):
+        filled.append((co, radius))
+        if i + 1 < len(balls):
+            nco, nradius = balls[i + 1]
+            mid = tuple((a + b) / 2.0 for a, b in zip(co, nco))
+            filled.append((mid, min(radius, nradius) * 0.95))
+    return filled
+
 def metaball_part(name, origin, balls, material, resolution=0.03):
     """Une partie du corps : des boules qui FUSIONNENT, converties en maillage."""
     data = bpy.data.metaballs.new(name)
-    data.resolution = resolution
+    data.resolution = resolution * S
+    data.threshold = 0.45  # surface un peu plus « grasse » : fusion franche.
     obj = bpy.data.objects.new(name, data)
-    obj.location = origin
+    obj.location = tuple(c * S for c in origin)
     bpy.context.collection.objects.link(obj)
-    for co, radius in balls:
+    for co, radius in chain(balls):
         element = data.elements.new()
-        element.co = co
-        element.radius = radius
+        element.co = tuple(c * S for c in co)
+        element.radius = radius * S
     bpy.context.view_layer.objects.active = obj
     for other in bpy.context.selected_objects:
         other.select_set(False)
@@ -44,11 +63,12 @@ def metaball_part(name, origin, balls, material, resolution=0.03):
     return converted
 
 def sphere_part(name, location, scale, material):
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, location=location,
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0,
+                                         location=tuple(c * S for c in location),
                                          segments=24, ring_count=16)
     part = bpy.context.object
     part.name = name
-    part.scale = scale
+    part.scale = tuple(c * S for c in scale)
     part.data.materials.append(material)
     bpy.ops.object.shade_smooth()
     return part
@@ -95,26 +115,26 @@ for side in (-1, 1):
 for side in (-1, 1):
     tag = "L" if side < 0 else "R"
     metaball_part(f"Arm{tag}", (0.175 * side, 0, 0.96), [
-        ((0.005 * side, 0, -0.02), 0.065), ((0.02 * side, 0.005, -0.11), 0.055),
-        ((0.035 * side, 0, -0.20), 0.048),
+        ((0.005 * side, 0, -0.02), 0.08), ((0.02 * side, 0.005, -0.11), 0.07),
+        ((0.035 * side, 0, -0.20), 0.062),
     ], SKIN)
     metaball_part(f"Hand{tag}", (0.215 * side, 0.005, 0.70), [
-        ((0, 0.015, -0.04), 0.055), ((0, 0.03, -0.085), 0.04),
-        ((-0.025 * side, 0.032, -0.11), 0.024), ((0.002, 0.035, -0.118), 0.024),
-        ((0.026 * side, 0.032, -0.11), 0.024),
-        ((-0.055 * side, 0.04, -0.035), 0.028),
+        ((0, 0.015, -0.04), 0.062), ((0, 0.03, -0.085), 0.048),
+        ((-0.025 * side, 0.032, -0.11), 0.028), ((0.002, 0.035, -0.118), 0.028),
+        ((0.026 * side, 0.032, -0.11), 0.028),
+        ((-0.055 * side, 0.04, -0.035), 0.032),
     ], SKIN, resolution=0.018)
 
 # ---- JAMBES courtes, GROS pieds ronds. ----
 for side in (-1, 1):
     tag = "L" if side < 0 else "R"
     metaball_part(f"Leg{tag}", (0.10 * side, 0, 0.52), [
-        ((0, 0.005, -0.08), 0.075), ((0, 0, -0.20), 0.062),
-        ((0, -0.005, -0.32), 0.05),
+        ((0, 0.005, -0.08), 0.09), ((0, 0, -0.20), 0.078),
+        ((0, -0.005, -0.32), 0.065),
     ], SKIN)
     metaball_part(f"Foot{tag}", (0.10 * side, 0, 0.09), [
-        ((0, -0.03, -0.01), 0.055), ((0, 0.06, -0.02), 0.055),
-        ((0, 0.13, -0.025), 0.045),
+        ((0, -0.03, -0.01), 0.062), ((0, 0.06, -0.02), 0.062),
+        ((0, 0.13, -0.025), 0.05),
     ], SKIN, resolution=0.02)
 
 bpy.ops.export_scene.gltf(

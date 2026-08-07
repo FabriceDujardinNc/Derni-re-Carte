@@ -24,6 +24,7 @@ func t(text: String) -> String:
 
 func toggle() -> void:
 	locale = "en" if locale == "fr" else "fr"
+	GameConfig.language = locale  # le CHOIX est persisté (pas l'arg de test lang=).
 	GameConfig.save_progress()
 	language_changed.emit()
 
