@@ -35,9 +35,9 @@ func setup(characters: Array) -> void:
 		groups.append([pool.pop_back(), pool.pop_back()])
 	for character in characters:
 		EventBus.log_private.emit(character,
-			"⛓️ Tu es enchaîné à quelqu'un dans cette salle… S'il meurt, tu meurs.")
+			Lang.t("⛓️ Tu es enchaîné à quelqu'un dans cette salle… S'il meurt, tu meurs."))
 		EventBus.log_private.emit(character,
-			"⛓️ INDICES : quand il encaisse, tu le SENS (bannière + cœur) → regarde qui vient d'être touché. Et à moins de 2 m de lui, ta chaîne frémit.")
+			Lang.t("⛓️ INDICES : quand il encaisse, tu le SENS (bannière + cœur) → regarde qui vient d'être touché. Et à moins de 2 m de lui, ta chaîne frémit."))
 	EventBus.player_died.connect(_on_player_died)
 	EventBus.player_damaged.connect(_on_player_damaged)
 
@@ -51,7 +51,7 @@ func group_of(character) -> Array:
 func _on_player_died(dead, _cause: String) -> void:
 	for partner in group_of(dead):
 		if partner != dead and partner.is_alive():
-			EventBus.log_public.emit("⛓️ %s s'effondre soudain… il était enchaîné à %s !"
+			EventBus.log_public.emit(Lang.t("⛓️ %s s'effondre soudain… il était enchaîné à %s !")
 				% [partner.display_name, dead.display_name])
 			partner.health.take_damage(999, "Chaîne du destin")
 
@@ -69,7 +69,7 @@ func _on_player_damaged(victim, amount: int, _source: String) -> void:
 		_echo_cooldowns[key] = now
 		EventBus.chain_echo.emit(partner)
 		EventBus.log_private.emit(partner,
-			"🩸 Une douleur sourde te traverse… ton enchaîné vient d'encaisser.")
+			Lang.t("🩸 Une douleur sourde te traverse… ton enchaîné vient d'encaisser."))
 
 ## Frémissement de proximité : tous les 4 s, si les partenaires sont proches.
 func _process(delta: float) -> void:
@@ -84,5 +84,5 @@ func _process(delta: float) -> void:
 				var b = group[j]
 				if a.is_alive() and b.is_alive() \
 						and a.global_position.distance_to(b.global_position) < SHIVER_RANGE:
-					EventBus.log_private.emit(a, "⛓️ Ta chaîne frémit… ton enchaîné est TOUT PRÈS.")
-					EventBus.log_private.emit(b, "⛓️ Ta chaîne frémit… ton enchaîné est TOUT PRÈS.")
+					EventBus.log_private.emit(a, Lang.t("⛓️ Ta chaîne frémit… ton enchaîné est TOUT PRÈS."))
+					EventBus.log_private.emit(b, Lang.t("⛓️ Ta chaîne frémit… ton enchaîné est TOUT PRÈS."))

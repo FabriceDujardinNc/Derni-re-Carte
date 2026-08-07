@@ -38,7 +38,7 @@ func _build_ui() -> void:
 	_panel.add_child(box)
 
 	var title := Label.new()
-	title.text = "⏸️  Pause"
+	title.text = Lang.t("⏸️  Pause")
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 30)
 	title.add_theme_color_override("font_color", Color(0.95, 0.85, 0.45))
@@ -53,7 +53,7 @@ func _build_ui() -> void:
 
 	# --- Volume ---
 	var volume_label := Label.new()
-	volume_label.text = "🔊  Volume : %d %%" % int(GameConfig.volume * 100)
+	volume_label.text = Lang.t("🔊  Volume : %d %%") % int(GameConfig.volume * 100)
 	box.add_child(volume_label)
 	var volume_slider := HSlider.new()
 	volume_slider.min_value = 0
@@ -63,14 +63,14 @@ func _build_ui() -> void:
 	volume_slider.custom_minimum_size = Vector2(0, 26)
 	volume_slider.value_changed.connect(func(value: float) -> void:
 		GameConfig.volume = value / 100.0
-		volume_label.text = "🔊  Volume : %d %%" % int(value)
+		volume_label.text = Lang.t("🔊  Volume : %d %%") % int(value)
 		AudioServer.set_bus_volume_db(0, linear_to_db(maxf(GameConfig.volume, 0.0001)))
 		AudioServer.set_bus_mute(0, GameConfig.volume <= 0.0))
 	box.add_child(volume_slider)
 
 	# --- Sensibilité souris ---
 	var sensitivity_label := Label.new()
-	sensitivity_label.text = "🖱️  Sensibilité souris : ×%.1f" % GameConfig.mouse_sensitivity
+	sensitivity_label.text = Lang.t("🖱️  Sensibilité souris : ×%.1f") % GameConfig.mouse_sensitivity
 	box.add_child(sensitivity_label)
 	var sensitivity_slider := HSlider.new()
 	sensitivity_slider.min_value = 0.4
@@ -80,19 +80,19 @@ func _build_ui() -> void:
 	sensitivity_slider.custom_minimum_size = Vector2(0, 26)
 	sensitivity_slider.value_changed.connect(func(value: float) -> void:
 		GameConfig.mouse_sensitivity = value
-		sensitivity_label.text = "🖱️  Sensibilité souris : ×%.1f" % value)
+		sensitivity_label.text = Lang.t("🖱️  Sensibilité souris : ×%.1f") % value)
 	box.add_child(sensitivity_slider)
 
 	# --- Voix ---
 	var mic_check := CheckButton.new()
-	mic_check.text = "🎤  Micro activé (maintenir V pour parler)"
+	mic_check.text = Lang.t("🎤  Micro activé (maintenir V pour parler)")
 	mic_check.button_pressed = GameConfig.voice_enabled
 	mic_check.toggled.connect(func(pressed: bool) -> void:
 		Voice.set_microphone_enabled(pressed))
 	box.add_child(mic_check)
 
 	var voice_label := Label.new()
-	voice_label.text = "🗣️  Volume des voix : %d %%" % int(GameConfig.voice_volume * 100)
+	voice_label.text = Lang.t("🗣️  Volume des voix : %d %%") % int(GameConfig.voice_volume * 100)
 	box.add_child(voice_label)
 	var voice_slider := HSlider.new()
 	voice_slider.min_value = 0
@@ -102,12 +102,12 @@ func _build_ui() -> void:
 	voice_slider.custom_minimum_size = Vector2(0, 26)
 	voice_slider.value_changed.connect(func(value: float) -> void:
 		GameConfig.voice_volume = value / 100.0
-		voice_label.text = "🗣️  Volume des voix : %d %%" % int(value))
+		voice_label.text = Lang.t("🗣️  Volume des voix : %d %%") % int(value))
 	box.add_child(voice_slider)
 
 	# --- Plein écran ---
 	var fullscreen_check := CheckButton.new()
-	fullscreen_check.text = "🖥️  Plein écran"
+	fullscreen_check.text = Lang.t("🖥️  Plein écran")
 	fullscreen_check.button_pressed = GameConfig.fullscreen
 	fullscreen_check.toggled.connect(func(pressed: bool) -> void:
 		GameConfig.fullscreen = pressed
@@ -119,14 +119,14 @@ func _build_ui() -> void:
 
 	# --- Sorties ---
 	var resume := Button.new()
-	resume.text = "▶   Reprendre"
+	resume.text = Lang.t("▶   Reprendre")
 	resume.custom_minimum_size = Vector2(0, 48)
 	UiKit.style_button(resume, UiKit.ACCENT, 20)
 	resume.pressed.connect(func() -> void: set_open(false))
 	box.add_child(resume)
 
 	var to_menu := Button.new()
-	to_menu.text = "🏠  Menu principal"
+	to_menu.text = Lang.t("🏠  Menu principal")
 	to_menu.custom_minimum_size = Vector2(0, 42)
 	UiKit.style_button(to_menu, UiKit.ACCENT_BLUE, 18)
 	to_menu.pressed.connect(func() -> void:
@@ -136,7 +136,7 @@ func _build_ui() -> void:
 	box.add_child(to_menu)
 
 	var quit := Button.new()
-	quit.text = "Quitter le jeu"
+	quit.text = Lang.t("Quitter le jeu")
 	quit.flat = true
 	quit.modulate = Color(1, 1, 1, 0.55)
 	UiKit.hover_pop(quit)
@@ -157,10 +157,10 @@ func set_open(open: bool) -> void:
 	if Net.active:
 		# Multijoueur : PAS de vraie pause — la table continue, et toi aussi
 		# tu restes vulnérable. Aucune échappatoire par le menu.
-		_note.text = "⚠️ La partie continue : tu restes vulnérable à la table !"
+		_note.text = Lang.t("⚠️ La partie continue : tu restes vulnérable à la table !")
 	elif open:
 		# Solo : vraie pause — le temps s'arrête (bots, poisons, minuteurs).
-		_note.text = "(jeu en pause)"
+		_note.text = Lang.t("(jeu en pause)")
 		_previous_time_scale = Engine.time_scale
 		Engine.time_scale = 0.0
 	else:

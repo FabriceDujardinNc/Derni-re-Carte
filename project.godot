@@ -15,18 +15,19 @@ run/main_scene="res://scenes/menu.tscn"
 config/features=PackedStringArray("4.7")
 config/icon="res://icon.svg"
 
+[audio]
+
+driver/enable_input=true
+
 [autoload]
 
 EventBus="*res://src/core/event_bus.gd"
 CardDatabase="*res://src/cards/card_database.gd"
 GameConfig="*res://src/core/game_config.gd"
+Lang="*res://src/core/lang.gd"
 Net="*res://src/networking/network_manager.gd"
 Audio="*res://src/audio/audio_director.gd"
 Voice="*res://src/audio/voice_chat.gd"
-
-[audio]
-
-driver/enable_input=true
 
 [display]
 
@@ -36,5 +37,5 @@ window/size/viewport_height=720
 [rendering]
 
 renderer/rendering_method="mobile"
-anti_aliasing/quality/msaa_3d=1
 textures/vram_compression/import_etc2_astc=true
+anti_aliasing/quality/msaa_3d=1

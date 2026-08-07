@@ -127,9 +127,9 @@ func _ready() -> void:
 			var blues: Array[String] = []
 			for i in characters.size():
 				(reds if i % 2 == 0 else blues).append(characters[i].display_name)
-			EventBus.log_public.emit("⚔️ 🔴 Équipe Rouge : %s" % ", ".join(reds))
-			EventBus.log_public.emit("⚔️ 🔵 Équipe Bleue : %s" % ", ".join(blues))
-			EventBus.log_public.emit("⚔️ Dernière équipe debout gagne. Le tir ami existe. Bonne chance.")
+			EventBus.log_public.emit(Lang.t("⚔️ 🔴 Équipe Rouge : %s") % ", ".join(reds))
+			EventBus.log_public.emit(Lang.t("⚔️ 🔵 Équipe Bleue : %s") % ", ".join(blues))
+			EventBus.log_public.emit(Lang.t("⚔️ Dernière équipe debout gagne. Le tir ami existe. Bonne chance."))
 
 	# Menu pause (Échap) : options et sorties — la partie continue derrière.
 	add_child(preload("res://src/ui/pause_menu.gd").new())
@@ -638,7 +638,7 @@ func _event_blackout() -> void:
 	tween.tween_property(_env, "ambient_light_energy", ambient, 1.2)
 	tween.tween_property(_sun, "light_energy", sun_energy, 1.2)
 	tween.chain().tween_callback(func() -> void: _blackout_active = false)
-	EventBus.log_public.emit("💡 La lumière revient…")
+	EventBus.log_public.emit(Lang.t("💡 La lumière revient…"))
 
 ## Trois éclairs qui blanchissent la salle, avec le tonnerre.
 func _event_storm() -> void:
@@ -826,7 +826,7 @@ func _spawn_characters() -> Array:
 			character.set_gaze_enabled(false)
 			# Première personne : caméra À LA PLACE des yeux, tête masquée pour soi.
 			var camera := Camera3D.new()
-			camera.position = Vector3(0, 1.58, -0.02)
+			camera.position = Vector3(0, 1.30, -0.02)
 			camera.rotation_degrees = Vector3(-10, 0, 0)
 			character.add_child(camera)
 			camera.current = true

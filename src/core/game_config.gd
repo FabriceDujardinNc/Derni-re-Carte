@@ -11,7 +11,7 @@ const PLAYER_COLORS: Array[Color] = [
 
 ## Version affichée au menu ET vérifiée à la connexion réseau : deux versions
 ## différentes ne peuvent pas jouer ensemble (protocole incompatible).
-const VERSION := "v0.10-alpha"
+const VERSION := "v0.11-alpha"
 
 ## Catalogue des chapeaux. Les 4 premiers sont gratuits ; les autres
 ## s'achètent avec l'audace GAGNÉE EN JOUANT (jamais d'argent réel).
@@ -55,6 +55,7 @@ var voice_volume := 1.0       ## Volume des voix des AUTRES (0 = sourdine).
 var audace_bank := 0                    ## Réserve d'audace gagnée en jouant.
 var unlocked_hats: Array = [0, 1, 2, 3] ## Chapeaux possédés.
 var selected_hat := 0                   ## Chapeau porté par le joueur local.
+var language := "fr"                    ## "fr" ou "en" (drapeau du menu).
 
 func _ready() -> void:
 	load_progress()
@@ -66,6 +67,9 @@ func load_progress() -> void:
 	audace_bank = config.get_value("progression", "audace_bank", 0)
 	unlocked_hats = config.get_value("progression", "unlocked_hats", [0, 1, 2, 3])
 	selected_hat = config.get_value("progression", "selected_hat", 0)
+	language = config.get_value("progression", "language", "fr")
+	if not language in ["fr", "en"]:
+		language = "fr"
 	# Garde-fous contre les valeurs aberrantes.
 	audace_bank = clampi(audace_bank, 0, 999999)
 	if not selected_hat in unlocked_hats:
@@ -76,6 +80,7 @@ func save_progress() -> void:
 	config.set_value("progression", "audace_bank", audace_bank)
 	config.set_value("progression", "unlocked_hats", unlocked_hats)
 	config.set_value("progression", "selected_hat", selected_hat)
+	config.set_value("progression", "language", Lang.locale)
 	config.save_encrypted_pass(SAVE_PATH, SAVE_KEY)
 
 ## Encaisse les points d'audace d'une partie dans la réserve.

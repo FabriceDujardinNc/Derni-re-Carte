@@ -40,7 +40,7 @@ func _d(key: String) -> float:
 ## Après un mauvais coup réussi : parfois, le bot savoure (dans le chat).
 func _maybe_taunt(_victim) -> void:
 	if randf() < _d("taunt"):
-		character.say(TAUNTS.pick_random())
+		character.say(Lang.t(TAUNTS.pick_random()))
 
 ## Probabilité d'afficher une émotion INVERSE de ce que le bot ressent.
 const BLUFF_CHANCE := {

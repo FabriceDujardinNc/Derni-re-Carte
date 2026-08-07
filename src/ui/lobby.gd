@@ -42,7 +42,7 @@ func _build_ui() -> void:
 	center.add_child(column)
 
 	var title := Label.new()
-	title.text = "🎴 Salle d'attente"
+	title.text = Lang.t("🎴 Salle d'attente")
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 40)
 	title.add_theme_color_override("font_color", Color(0.95, 0.88, 0.72))
@@ -62,17 +62,17 @@ func _build_ui() -> void:
 	_info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_info_label.modulate = Color(1, 1, 1, 0.75)
 	if Net.is_server:
-		_info_label.text = "À partager avec tes amis :\nIP : %s   ·   Mot de passe : %s\n(sur le même PC : 127.0.0.1)" % [
+		_info_label.text = Lang.t("À partager avec tes amis :\nIP : %s   ·   Mot de passe : %s\n(sur le même PC : 127.0.0.1)") % [
 			Net.best_local_ip(),
-			Net.password if not Net.password.is_empty() else "(aucun)"]
+			Net.password if not Net.password.is_empty() else Lang.t("(aucun)")]
 	else:
-		_info_label.text = "Connecté ! En attente du lancement par l'hôte…"
+		_info_label.text = Lang.t("Connecté ! En attente du lancement par l'hôte…")
 	box.add_child(_info_label)
 
 	box.add_child(HSeparator.new())
 
 	var players_title := Label.new()
-	players_title.text = "Joueurs connectés :"
+	players_title.text = Lang.t("Joueurs connectés :")
 	players_title.modulate = Color(1, 1, 1, 0.8)
 	box.add_child(players_title)
 
@@ -89,7 +89,7 @@ func _build_ui() -> void:
 		box.add_child(_start_button)
 
 	var back := Button.new()
-	back.text = "Quitter le salon"
+	back.text = Lang.t("Quitter le salon")
 	back.flat = true
 	back.modulate = Color(1, 1, 1, 0.55)
 	UiKit.hover_pop(back)
@@ -110,7 +110,7 @@ func _refresh_players() -> void:
 	for peer_id in peer_ids:
 		var entry: Dictionary = Net.peers[peer_id]
 		var label := Label.new()
-		var suffix := "  (hôte)" if int(peer_id) == 1 else ""
+		var suffix := Lang.t("  (hôte)") if int(peer_id) == 1 else ""
 		label.text = "⬤ %s%s" % [entry["name"], suffix]
 		label.add_theme_color_override("font_color",
 			GameConfig.PLAYER_COLORS[int(entry["color"]) % GameConfig.PLAYER_COLORS.size()])
@@ -118,9 +118,9 @@ func _refresh_players() -> void:
 	if _start_button != null:
 		var humans := Net.peers.size()
 		var bots := maxi(GameConfig.player_count - humans, 0)
-		_start_button.text = "🎴  LANCER  (%d joueur%s + %d bot%s)" % [
+		_start_button.text = Lang.t("🎴  LANCER  (%d joueur%s + %d bot%s)") % [
 			humans, "s" if humans > 1 else "", bots, "s" if bots > 1 else ""]
 
 func _on_join_failed(reason: String) -> void:
 	get_tree().change_scene_to_file("res://scenes/menu.tscn")
-	push_warning("Connexion refusée : " + reason)
+	push_warning(Lang.t("Connexion refusée : ") + reason)

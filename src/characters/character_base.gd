@@ -82,11 +82,17 @@ const ARM_REST := 50.0    # posés vers la table
 const ARM_RAISED := 112.0 # main devant le visage (lecture de carte)
 
 ## Position de la carte tenue : au repos (posée devant soi) et levée (devant le visage).
-const CARD_REST_POS := Vector3(0.3, 1.05, -0.45)
-const CARD_RAISED_POS := Vector3(0.25, 1.42, -0.5)
+const CARD_REST_POS := Vector3(0.28, 0.9, -0.42)
+const CARD_RAISED_POS := Vector3(0.2, 1.25, -0.45)
+
+## Le modèle Blender (assets/models/avatar_test.glb). Éditable dans Blender
+## tant que les NOMS d'objets sont conservés (Body, Head, ArmL/R, HandL/R…).
+const AVATAR_SCENE := preload("res://assets/models/avatar_test.glb")
 
 var _body: MeshInstance3D
+var _body_base_scale := Vector3.ONE
 var _head_pivot: Node3D
+var _hat_anchor: Node3D
 var _mat: StandardMaterial3D
 var _name_label: Label3D
 var _emote_label: Label3D
@@ -131,14 +137,14 @@ func _ready() -> void:
 	health.guardian_saved.connect(func() -> void:
 		play_emote("👼")
 		if not Net.client_mode():
-			EventBus.log_public.emit("👼 L'Ange Gardien arrache %s à la mort !" % display_name))
+			EventBus.log_public.emit(Lang.t("👼 L'Ange Gardien arrache %s à la mort !") % display_name))
 	# Réactions "corporelles" aux événements de table.
 	EventBus.turn_started.connect(_on_turn_started_body)
 	EventBus.card_drawn.connect(_on_card_drawn_body)
 	EventBus.card_resolved.connect(_on_card_resolved_body)
 	EventBus.stalling_started.connect(func(lambin) -> void:
 		if lambin == self:
-			_turn_marker.text = "🪨 PIOCHE !!!"
+			_turn_marker.text = Lang.t("🪨 PIOCHE !!!")
 			_turn_marker.modulate = Color(1.0, 0.35, 0.2))
 	EventBus.chain_echo.connect(func(who) -> void:
 		if who == self:
@@ -150,50 +156,7 @@ func is_alive() -> bool:
 # ---------------------------------------------------------------- Construction
 
 func _build_visuals() -> void:
-	_mat = StandardMaterial3D.new()
-	_mat.albedo_color = color
-	_mat.roughness = 0.9
-
-	var capsule := CapsuleMesh.new()
-	capsule.radius = 0.35
-	capsule.height = 1.4
-	_body = MeshInstance3D.new()
-	_body.mesh = capsule
-	_body.material_override = _mat
-	_body.position = Vector3(0, 0.7, 0)
-	add_child(_body)
-	_body_base_pos = _body.position
-
-	# Tête sur pivot : c'est elle qui "regarde" (mécanique de bluff).
-	_head_pivot = Node3D.new()
-	_head_pivot.position = Vector3(0, 1.55, 0)
-	add_child(_head_pivot)
-
-	var head_mesh := SphereMesh.new()
-	head_mesh.radius = 0.28
-	head_mesh.height = 0.56
-	var head := MeshInstance3D.new()
-	head.mesh = head_mesh
-	head.material_override = _mat
-	_head_pivot.add_child(head)
-
-	# Yeux côté -Z (face à la table) : la direction du regard se lit de loin.
-	var eye_mat := StandardMaterial3D.new()
-	eye_mat.albedo_color = Color(0.08, 0.08, 0.1)
-	for side in [-1.0, 1.0]:
-		var eye := MeshInstance3D.new()
-		var eye_mesh := SphereMesh.new()
-		eye_mesh.radius = 0.05
-		eye_mesh.height = 0.1
-		eye.mesh = eye_mesh
-		eye.material_override = eye_mat
-		eye.position = Vector3(0.1 * side, 0.05, -0.24)
-		_head_pivot.add_child(eye)
-
-	# Bras posés vers la table ; le droit tient les cartes.
-	_shoulder_l = _build_arm(-1.0)
-	_shoulder_r = _build_arm(1.0)
-	_hand_r = _shoulder_r.get_node("Hand")
+	_setup_avatar()
 	_build_card_visual()
 	_build_accessories()
 
@@ -203,7 +166,7 @@ func _build_visuals() -> void:
 	_name_label.font_size = 48
 	_name_label.pixel_size = 0.004
 	_name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_name_label.position = Vector3(0, 2.3, 0)  # au-dessus des chapeaux.
+	_name_label.position = Vector3(0, 1.95, 0)  # au-dessus des chapeaux.
 	_name_label.modulate = color.lightened(0.4)
 	add_child(_name_label)
 
@@ -212,25 +175,25 @@ func _build_visuals() -> void:
 	_emote_label.font_size = 110
 	_emote_label.pixel_size = 0.004
 	_emote_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_emote_label.position = Vector3(0, 2.7, 0)
+	_emote_label.position = Vector3(0, 2.3, 0)
 	add_child(_emote_label)
 
 	# Le rappel de tour flotte au-dessus du joueur qui doit piocher : toute la
 	# table voit qui fait attendre tout le monde. La honte est une mécanique.
 	_turn_marker = Label3D.new()
-	_turn_marker.text = "🎯 À TOI !"
+	_turn_marker.text = Lang.t("🎯 À TOI !")
 	_turn_marker.font = GameFonts.ui_font()
 	_turn_marker.font_size = 64
 	_turn_marker.pixel_size = 0.005
 	_turn_marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_turn_marker.position = Vector3(0, 3.05, 0)
+	_turn_marker.position = Vector3(0, 2.6, 0)
 	_turn_marker.modulate = Color(1.0, 0.85, 0.3)
 	_turn_marker.visible = false
 	add_child(_turn_marker)
 
 	# La fleur : portée en main gauche, ou arborée sur la tête une fois offerte.
 	_carried_flower = _build_flower(_shoulder_l.get_node("Hand"), Vector3(0, -0.1, 0))
-	_worn_flower = _build_flower(_head_pivot, Vector3(0.16, 0.14, -0.14))
+	_worn_flower = _build_flower(_head_pivot, Vector3(0.19, 0.22, -0.06))
 
 	# Le sac à dos et sa poche transparente : les cartes gardées y sont
 	# RANGÉES EN VRAC, visibles de quiconque regarde ton dos. L'espionnage
@@ -247,7 +210,7 @@ func _build_visuals() -> void:
 	_chat_bubble.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_chat_bubble.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_chat_bubble.outline_size = 14
-	_chat_bubble.position = Vector3(0, 3.0, 0)
+	_chat_bubble.position = Vector3(0, 2.55, 0)
 	add_child(_chat_bubble)
 
 	# 🎤 au-dessus de la tête pendant qu'il parle (lire QUI parle = gameplay).
@@ -257,7 +220,7 @@ func _build_visuals() -> void:
 	_talk_icon.font_size = 64
 	_talk_icon.pixel_size = 0.004
 	_talk_icon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_talk_icon.position = Vector3(0.45, 2.3, 0)
+	_talk_icon.position = Vector3(0.4, 1.95, 0)
 	_talk_icon.visible = false
 	add_child(_talk_icon)
 
@@ -267,12 +230,80 @@ func _build_visuals() -> void:
 	collision_body.set_meta("character", self)
 	var shape := CollisionShape3D.new()
 	var capsule_shape := CapsuleShape3D.new()
-	capsule_shape.radius = 0.4
-	capsule_shape.height = 1.9
+	capsule_shape.radius = 0.35
+	capsule_shape.height = 1.6
 	shape.shape = capsule_shape
-	shape.position = Vector3(0, 0.95, 0)
+	shape.position = Vector3(0, 0.8, 0)
 	collision_body.add_child(shape)
 	add_child(collision_body)
+
+## Instancie le modèle Blender et REBRANCHE tout le langage corporel dessus :
+## matériau de peau teintable (couleur + dégradation), pivot de tête (regard),
+## épaules animables (cartes, gifles, lancers), marqueurs de mains (fleur).
+func _setup_avatar() -> void:
+	var avatar: Node3D = AVATAR_SCENE.instantiate()
+	avatar.rotation.y = PI  # le glTF sort face à +Z ; le jeu regarde -Z.
+	add_child(avatar)
+
+	# Matériau UNIQUE de peau : couleur du joueur, dégradation, flashs de dégâts.
+	# (Les yeux, pupilles et cheveux gardent leurs matériaux Blender.)
+	_mat = StandardMaterial3D.new()
+	_mat.albedo_color = color
+	_mat.roughness = 0.9
+	for mesh in avatar.find_children("*", "MeshInstance3D", true, false):
+		if not (mesh.name.begins_with("Eye") or mesh.name.begins_with("Pupil") \
+				or mesh.name.begins_with("Hair")):
+			mesh.material_override = _mat
+
+	_body = avatar.find_child("Body", true, false) as MeshInstance3D
+	_body_base_pos = _body.position
+	_body_base_scale = _body.scale
+
+	# Pivot de tête : la tête et TOUT ce qu'elle porte y sont rattachés pour
+	# que le REGARD (mécanique de bluff) pilote le modèle. La hauteur du pivot
+	# vient du modèle lui-même (origine de "Head" = articulation du cou).
+	var head_part: Node3D = avatar.find_child("Head", true, false)
+	_head_pivot = Node3D.new()
+	_head_pivot.position = Vector3(0, head_part.global_position.y, 0)
+	add_child(_head_pivot)
+	for part_name in ["Head", "Nose", "Muzzle", "NoseTip", "EarL", "EarR", "Hair",
+			"EyeWhiteL", "EyeWhiteR", "PupilL", "PupilR"]:
+		var part: Node3D = avatar.find_child(part_name, true, false)
+		if part != null:
+			part.reparent(_head_pivot)
+
+	# Ancre des chapeaux : posée sur le sommet du crâne, légèrement réduite
+	# pour s'adapter à la tête du modèle.
+	_hat_anchor = Node3D.new()
+	_hat_anchor.position = Vector3(0, 0.30, 0)
+	_hat_anchor.scale = Vector3.ONE * 0.85
+	_head_pivot.add_child(_hat_anchor)
+
+	# Épaules animables : les bras du modèle passent sous des pivots.
+	_shoulder_l = _make_shoulder(avatar, "L", -1.0)
+	_shoulder_r = _make_shoulder(avatar, "R", 1.0)
+	_hand_r = _shoulder_r.get_node("Hand")
+
+## Crée un pivot d'épaule et y rattache le bras + la main du modèle.
+## L'origine de "ArmX" dans Blender EST l'articulation de l'épaule.
+func _make_shoulder(avatar: Node3D, suffix: String, side: float) -> Node3D:
+	var arm: Node3D = avatar.find_child("Arm" + suffix, true, false)
+	var hand_mesh: Node3D = avatar.find_child("Hand" + suffix, true, false)
+	var shoulder := Node3D.new()
+	shoulder.position = arm.global_position
+	add_child(shoulder)
+	arm.reparent(shoulder)
+	if hand_mesh != null:
+		hand_mesh.reparent(shoulder)
+	# Marqueur "Hand" : point d'ancrage (fleur portée, position de la main).
+	var hand := Node3D.new()
+	hand.name = "Hand"
+	hand.position = shoulder.to_local(hand_mesh.global_position) if hand_mesh != null \
+		else Vector3(0, -0.55, 0)
+	shoulder.add_child(hand)
+	# Pose de repos : bras vers la table (les animations existantes s'appliquent).
+	shoulder.rotation_degrees = Vector3(ARM_REST, 0, 8.0 * side)
+	return shoulder
 
 ## Accessoires distinctifs : chapeau (4 modèles, déterminé par le nom),
 ## sourcils et pieds. Attachés au pivot de tête → ils suivent le regard.
@@ -291,22 +322,16 @@ func _build_accessories() -> void:
 	brow_mat.albedo_color = Color(0.08, 0.08, 0.1)
 	for side in [-1.0, 1.0]:
 		var brow := BoxMesh.new()
-		brow.size = Vector3(0.1, 0.025, 0.02)
-		var mesh := _add_head_mesh(brow, Vector3(0.1 * side, 0.13, -0.25), brow_mat)
-		mesh.rotation_degrees = Vector3(0, 0, 8.0 * side)
-
-	# Pieds : deux demi-sphères sombres, le personnage ne flotte plus.
-	var feet_mat := StandardMaterial3D.new()
-	feet_mat.albedo_color = color.darkened(0.6)
-	for side in [-1.0, 1.0]:
-		var foot := SphereMesh.new()
-		foot.radius = 0.13
-		foot.height = 0.16
+		brow.size = Vector3(0.09, 0.024, 0.02)
+		# Posés juste au-dessus des grands yeux du modèle (repère : pivot de tête).
 		var mesh := MeshInstance3D.new()
-		mesh.mesh = foot
-		mesh.material_override = feet_mat
-		mesh.position = Vector3(0.14 * side, 0.05, -0.08)
-		add_child(mesh)
+		mesh.mesh = brow
+		mesh.material_override = brow_mat
+		mesh.position = Vector3(0.082 * side, 0.30, -0.17)
+		mesh.rotation_degrees = Vector3(0, 0, 8.0 * side)
+		_head_pivot.add_child(mesh)
+
+	# (Les pieds et les yeux viennent désormais du modèle Blender.)
 
 ## Construit un chapeau par identifiant (voir GameConfig.HATS).
 func _build_hat(hat: int, hat_mat: StandardMaterial3D) -> void:
@@ -419,39 +444,10 @@ func _add_head_mesh(mesh: Mesh, pos: Vector3, material: Material) -> MeshInstanc
 	instance.mesh = mesh
 	instance.material_override = material
 	instance.position = pos
-	_head_pivot.add_child(instance)
+	_hat_anchor.add_child(instance)
 	return instance
 
 ## Bras = pivot à l'épaule + segment qui pend, main au bout.
-func _build_arm(side: float) -> Node3D:
-	var shoulder := Node3D.new()
-	shoulder.position = Vector3(0.38 * side, 1.3, 0)
-	shoulder.rotation_degrees = Vector3(ARM_REST, 0, 8.0 * side)
-	add_child(shoulder)
-
-	var arm_mesh := CapsuleMesh.new()
-	arm_mesh.radius = 0.09
-	arm_mesh.height = 0.6
-	var arm := MeshInstance3D.new()
-	arm.mesh = arm_mesh
-	arm.material_override = _mat
-	arm.position = Vector3(0, -0.3, 0)
-	shoulder.add_child(arm)
-
-	var hand := Node3D.new()
-	hand.name = "Hand"
-	hand.position = Vector3(0, -0.62, 0)
-	shoulder.add_child(hand)
-
-	var hand_mesh := SphereMesh.new()
-	hand_mesh.radius = 0.11
-	hand_mesh.height = 0.22
-	var hand_visual := MeshInstance3D.new()
-	hand_visual.mesh = hand_mesh
-	hand_visual.material_override = _mat
-	hand.add_child(hand_visual)
-	return shoulder
-
 ## Carte 3D tenue devant soi : face blanche côté porteur, DOS ROUGE côté table.
 ## Ancrée au personnage (pas à la main) : orientation garantie, la main levée
 ## vient naturellement se placer dessous pour donner l'illusion de la tenir.
@@ -531,11 +527,11 @@ func drink() -> void:
 	if not is_alive() or not EventBus.match_started:
 		return
 	if _drink_cooldown > 0.0:
-		EventBus.log_private.emit(self, "🍺 Le barman essuie encore ton verre… (patiente un peu)")
+		EventBus.log_private.emit(self, Lang.t("🍺 Le barman essuie encore ton verre… (patiente un peu)"))
 		return
 	_drink_cooldown = 8.0
 	health.heal(1)
-	EventBus.log_public.emit("🍺 %s s'accorde un verre au comptoir. (+1 PV)" % display_name)
+	EventBus.log_public.emit(Lang.t("🍺 %s s'accorde un verre au comptoir. (+1 PV)") % display_name)
 
 # ---------------------------------------------------------------- Le sac à dos
 
@@ -547,21 +543,21 @@ func _build_bag() -> void:
 	leather.roughness = 1.0
 
 	var bag := BoxMesh.new()
-	bag.size = Vector3(0.46, 0.56, 0.16)
+	bag.size = Vector3(0.36, 0.42, 0.14)
 	var bag_visual := MeshInstance3D.new()
 	bag_visual.mesh = bag
 	bag_visual.material_override = leather
-	bag_visual.position = Vector3(0, 1.05, 0.44)
+	bag_visual.position = Vector3(0, 0.82, 0.26)
 	add_child(bag_visual)
 
 	# Sangles sur les épaules.
 	for side in [-1.0, 1.0]:
 		var strap := BoxMesh.new()
-		strap.size = Vector3(0.06, 0.4, 0.34)
+		strap.size = Vector3(0.05, 0.3, 0.26)
 		var strap_visual := MeshInstance3D.new()
 		strap_visual.mesh = strap
 		strap_visual.material_override = leather
-		strap_visual.position = Vector3(0.18 * side, 1.32, 0.2)
+		strap_visual.position = Vector3(0.13 * side, 1.0, 0.1)
 		strap_visual.rotation_degrees = Vector3(38, 0, 0)
 		add_child(strap_visual)
 
@@ -571,29 +567,29 @@ func _build_bag() -> void:
 	bag_body.set_meta("character", self)
 	var bag_shape := CollisionShape3D.new()
 	var bag_box := BoxShape3D.new()
-	bag_box.size = Vector3(0.52, 0.62, 0.2)
+	bag_box.size = Vector3(0.42, 0.48, 0.18)
 	bag_shape.shape = bag_box
-	bag_shape.position = Vector3(0, 1.05, 0.47)
+	bag_shape.position = Vector3(0, 0.82, 0.28)
 	bag_body.add_child(bag_shape)
 	add_child(bag_body)
 
 	# Poche transparente à l'arrière.
 	var pocket := BoxMesh.new()
-	pocket.size = Vector3(0.42, 0.5, 0.015)
+	pocket.size = Vector3(0.32, 0.38, 0.015)
 	var pocket_visual := MeshInstance3D.new()
 	pocket_visual.mesh = pocket
 	var pocket_mat := StandardMaterial3D.new()
 	pocket_mat.albedo_color = Color(0.75, 0.85, 0.95, 0.22)
 	pocket_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	pocket_visual.material_override = pocket_mat
-	pocket_visual.position = Vector3(0, 1.05, 0.55)
+	pocket_visual.position = Vector3(0, 0.82, 0.34)
 	add_child(pocket_visual)
 
 	# Trois emplacements de mini-cartes, volontairement de travers.
 	var slots := [
-		[Vector3(-0.11, 1.13, 0.53), -14.0],
-		[Vector3(0.03, 1.0, 0.535), 9.0],
-		[Vector3(0.12, 1.15, 0.53), -5.0],
+		[Vector3(-0.085, 0.88, 0.325), -14.0],
+		[Vector3(0.02, 0.78, 0.33), 9.0],
+		[Vector3(0.09, 0.89, 0.325), -5.0],
 	]
 	for slot in slots:
 		var mini := Node3D.new()
@@ -602,7 +598,7 @@ func _build_bag() -> void:
 		mini.visible = false
 		add_child(mini)
 		var face := BoxMesh.new()
-		face.size = Vector3(0.17, 0.23, 0.008)
+		face.size = Vector3(0.14, 0.19, 0.008)
 		var face_visual := MeshInstance3D.new()
 		face_visual.mesh = face
 		var face_mat := StandardMaterial3D.new()
@@ -613,20 +609,20 @@ func _build_bag() -> void:
 		emoji.name = "Emoji"
 		emoji.font = GameFonts.emoji_font()
 		emoji.font_size = 30
-		emoji.pixel_size = 0.0022
-		emoji.position = Vector3(0, 0.04, 0.006)
+		emoji.pixel_size = 0.0018
+		emoji.position = Vector3(0, 0.033, 0.006)
 		mini.add_child(emoji)
 		var title := Label3D.new()
 		title.name = "Titre"
 		title.font = GameFonts.ui_font()
 		title.font_size = 11
-		title.pixel_size = 0.0018
+		title.pixel_size = 0.0015
 		title.width = 90.0
 		title.autowrap_mode = TextServer.AUTOWRAP_WORD
 		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		title.modulate = Color(0.15, 0.15, 0.2)
 		title.outline_size = 0
-		title.position = Vector3(0, -0.055, 0.006)
+		title.position = Vector3(0, -0.046, 0.006)
 		mini.add_child(title)
 		_bag_cards.append(mini)
 
@@ -637,7 +633,7 @@ func _refresh_bag() -> void:
 		if i < hand.size():
 			mini.visible = true
 			(mini.get_node("Emoji") as Label3D).text = hand[i].get("emoji", "")
-			(mini.get_node("Titre") as Label3D).text = hand[i].get("name", "")
+			(mini.get_node("Titre") as Label3D).text = Lang.t(hand[i].get("name", ""))
 		else:
 			mini.visible = false
 
@@ -648,9 +644,9 @@ func _refresh_bag() -> void:
 func set_team(team_index: int) -> void:
 	team = team_index
 	var band := CylinderMesh.new()
-	band.top_radius = 0.39
-	band.bottom_radius = 0.39
-	band.height = 0.14
+	band.top_radius = 0.20
+	band.bottom_radius = 0.20
+	band.height = 0.10
 	var band_visual := MeshInstance3D.new()
 	band_visual.mesh = band
 	var band_material := StandardMaterial3D.new()
@@ -659,7 +655,7 @@ func set_team(team_index: int) -> void:
 	band_material.emission = TEAM_COLORS[team_index]
 	band_material.emission_energy_multiplier = 0.4
 	band_visual.material_override = band_material
-	band_visual.position = Vector3(0, 1.15, 0)
+	band_visual.position = Vector3(0, 0.84, 0)
 	add_child(band_visual)
 	_name_label.text = "%s %s" % [TEAM_EMOJIS[team_index], display_name]
 	_name_label.modulate = TEAM_COLORS[team_index].lightened(0.35)
@@ -681,11 +677,11 @@ func steal_card_from(victim, index: int) -> void:
 	hand.append(card)
 	_refresh_bag()
 	EventBus.card_stolen.emit(self, victim, card)
-	EventBus.log_public.emit("🫳 Une carte a été dérobée dans le sac de %s !" % victim.display_name)
-	EventBus.log_private.emit(self, "🫳 Volé : %s %s. Personne ne t'a vu… normalement."
-		% [card.get("emoji", ""), card.get("name", "?")])
-	EventBus.log_private.emit(victim, "❗ On t'a volé : %s %s !"
-		% [card.get("emoji", ""), card.get("name", "?")])
+	EventBus.log_public.emit(Lang.t("🫳 Une carte a été dérobée dans le sac de %s !") % victim.display_name)
+	EventBus.log_private.emit(self, Lang.t("🫳 Volé : %s %s. Personne ne t'a vu… normalement.")
+		% [card.get("emoji", ""), Lang.t(card.get("name", "?"))])
+	EventBus.log_private.emit(victim, Lang.t("❗ On t'a volé : %s %s !")
+		% [card.get("emoji", ""), Lang.t(card.get("name", "?"))])
 
 # ---------------------------------------------------------------- La fleur
 
@@ -694,7 +690,7 @@ func pick_flower() -> void:
 	if not is_alive() or not EventBus.match_started:
 		return
 	if EventBus.flower_taken:
-		EventBus.log_private.emit(self, "🥀 Il n'y a plus de fleur à offrir cette partie…")
+		EventBus.log_private.emit(self, Lang.t("🥀 Il n'y a plus de fleur à offrir cette partie…"))
 		return
 	if has_flower:
 		return
@@ -702,7 +698,7 @@ func pick_flower() -> void:
 	has_flower = true
 	show_carried_flower(true)
 	EventBus.flower_picked.emit(self)
-	EventBus.log_public.emit("🌹 %s cueille l'unique fleur de la taverne… Pour qui ?" % display_name)
+	EventBus.log_public.emit(Lang.t("🌹 %s cueille l'unique fleur de la taverne… Pour qui ?") % display_name)
 
 ## Offre la fleur à un joueur proche (+30 PV, +1 audace chacun)…
 ## ou à SOI-MÊME, avec un aplomb total.
@@ -718,11 +714,11 @@ func offer_flower(target) -> void:
 		EventBus.points_changed.emit(self, points)
 		play_emote("💅")
 		EventBus.flower_offered.emit(self, self)
-		EventBus.log_public.emit("🌹💅 %s s'offre la fleur à LUI-MÊME ! +30 PV, et aucune honte."
+		EventBus.log_public.emit(Lang.t("🌹💅 %s s'offre la fleur à LUI-MÊME ! +30 PV, et aucune honte.")
 			% display_name)
 		return
 	if global_position.distance_to(target.global_position) > FLOWER_OFFER_RANGE:
-		EventBus.log_private.emit(self, "🌹 Approche-toi de lui pour offrir ta fleur !")
+		EventBus.log_private.emit(self, Lang.t("🌹 Approche-toi de lui pour offrir ta fleur !"))
 		return
 	has_flower = false
 	show_carried_flower(false)
@@ -734,7 +730,7 @@ func offer_flower(target) -> void:
 	EventBus.points_changed.emit(target, target.points)
 	target.play_emote("❤️")
 	EventBus.flower_offered.emit(self, target)
-	EventBus.log_public.emit("🌹 %s offre sa fleur à %s ! Toute la table fond. (+30 PV, +1 audace chacun)"
+	EventBus.log_public.emit(Lang.t("🌹 %s offre sa fleur à %s ! Toute la table fond. (+30 PV, +1 audace chacun)")
 		% [display_name, target.display_name])
 
 func show_carried_flower(carried: bool) -> void:
@@ -810,16 +806,15 @@ func set_overhead_visible(visible_overhead: bool) -> void:
 ## Première personne : la tête passe sur la couche de rendu 2, que la caméra
 ## du joueur local ignore. Les AUTRES joueurs continuent de voir sa tête.
 func hide_head_from_camera(camera: Camera3D) -> void:
-	for child in _head_pivot.get_children():
-		if child is VisualInstance3D:
-			child.layers = 2
+	for child in _head_pivot.find_children("*", "VisualInstance3D", true, false):
+		child.layers = 2
 	camera.cull_mask = 1
 
 func look_at_point(world_point: Vector3) -> void:
 	_gaze_point = world_point
 
 func look_at_character(other: Node3D) -> void:
-	_gaze_point = other.global_position + Vector3(0, 1.55, 0)
+	_gaze_point = other.global_position + Vector3(0, 1.15, 0)
 
 # ---------------------------------------------------------------- Se lever / s'asseoir
 
@@ -837,7 +832,7 @@ func stand_up() -> void:
 	EventBus.player_stood_up.emit(self)
 	# En réseau client, le log arrive via l'hôte (sinon il apparaîtrait en double).
 	if not Net.client_mode():
-		EventBus.log_public.emit("👀 %s se lève de sa chaise…" % display_name)
+		EventBus.log_public.emit(Lang.t("👀 %s se lève de sa chaise…") % display_name)
 
 func sit_down() -> void:
 	if is_seated:
@@ -848,7 +843,7 @@ func sit_down() -> void:
 	auto_moving = false
 	EventBus.player_sat_down.emit(self)
 	if not Net.client_mode():
-		EventBus.log_public.emit("🪑 %s se rassoit." % display_name)
+		EventBus.log_public.emit(Lang.t("🪑 %s se rassoit.") % display_name)
 	seated.emit()
 
 ## Retour automatique à sa place en contournant la table.
@@ -941,7 +936,7 @@ func try_slap(target) -> bool:
 	var swing := create_tween()
 	swing.tween_property(_shoulder_r, "rotation_degrees:z", 70.0, 0.12)
 	swing.tween_property(_shoulder_r, "rotation_degrees:z", 8.0, 0.25)
-	EventBus.log_public.emit("👋 CLAC ! %s gifle %s !" % [display_name, target.display_name])
+	EventBus.log_public.emit(Lang.t("👋 CLAC ! %s gifle %s !") % [display_name, target.display_name])
 	target.receive_slap(self)
 	return true
 
@@ -968,14 +963,14 @@ func throw_rock(target) -> bool:
 	var damage := ROCK_DAMAGE if target.is_seated else ROCK_DAMAGE_STANDING
 	var thrower_name := display_name
 	Projectile.throw(get_tree().current_scene, rock_pile_position,
-		target.global_position + Vector3(0, 1.3, 0),
+		target.global_position + Vector3(0, 1.1, 0),
 		func() -> void:
 			if is_instance_valid(target):
-				target.health.take_damage(damage, "Caillou de %s" % thrower_name))
+				target.health.take_damage(damage, Lang.t("Caillou de %s") % thrower_name))
 	return true
 
 func receive_slap(from) -> void:
-	health.take_damage(SLAP_DAMAGE, "Claque de %s" % from.display_name)
+	health.take_damage(SLAP_DAMAGE, Lang.t("Claque de %s") % from.display_name)
 	play_emote("😱")
 	# Projection comique, en restant dans l'arène.
 	var away: Vector3 = (global_position - from.global_position).normalized()
@@ -996,7 +991,7 @@ func store_card(card: Dictionary) -> void:
 	hand.append(card)
 	_refresh_bag()
 	EventBus.card_stored.emit(self, card)
-	EventBus.log_public.emit("🎒 %s range une carte dans son sac…" % display_name)
+	EventBus.log_public.emit(Lang.t("🎒 %s range une carte dans son sac…") % display_name)
 
 ## Utilise une carte de la main. `target` = soi-même, ou un autre joueur si lançable.
 func use_card(index: int, target) -> void:
@@ -1014,8 +1009,8 @@ func use_card(index: int, target) -> void:
 		_raise_card()
 		get_tree().create_timer(0.25).timeout.connect(_lower_card)
 		Projectile.throw(get_tree().current_scene,
-			global_position + Vector3(0, 1.5, 0),
-			target.global_position + Vector3(0, 1.2, 0),
+			global_position + Vector3(0, 1.25, 0),
+			target.global_position + Vector3(0, 1.0, 0),
 			func() -> void:
 				if is_instance_valid(target):
 					EffectExecutor.apply(target, card, self))
@@ -1026,7 +1021,7 @@ func use_card(index: int, target) -> void:
 
 func _on_turn_started_body(who) -> void:
 	# Marqueur « À TOI ! » au-dessus du joueur courant, visible par les autres.
-	_turn_marker.text = "🎯 À TOI !"
+	_turn_marker.text = Lang.t("🎯 À TOI !")
 	_turn_marker.modulate = Color(1.0, 0.85, 0.3)
 	_turn_marker.visible = who == self and _overhead_visible and is_alive()
 	if not is_alive() or not _gaze_enabled:
@@ -1058,15 +1053,15 @@ func reveal_card() -> void:
 	health.heal(REVEAL_HEAL)
 	EventBus.points_changed.emit(self, points)
 	EventBus.card_revealed.emit(self, current_card)
-	EventBus.log_public.emit("📣 %s révèle sa carte : %s %s ! (+1 point d'audace)"
-		% [display_name, current_card.get("emoji", ""), current_card.get("name", "?")])
+	EventBus.log_public.emit(Lang.t("📣 %s révèle sa carte : %s %s ! (+1 point d'audace)")
+		% [display_name, current_card.get("emoji", ""), Lang.t(current_card.get("name", "?"))])
 
 ## Monte la carte devant le visage : les autres voient qu'on lit… sauf si un
 ## espion debout regarde par-dessus l'épaule (le texte est écrit sur la face).
 func _raise_card() -> void:
 	_holding_card = true
 	_card_emoji_label.text = current_card.get("emoji", "")
-	_card_label.text = current_card.get("name", "")
+	_card_label.text = Lang.t(current_card.get("name", ""))
 	_card_visual.visible = true
 	_card_visual.position = CARD_REST_POS
 	if _arm_tween and _arm_tween.is_valid():
@@ -1126,8 +1121,9 @@ func _process(delta: float) -> void:
 	if _talk_icon.visible and Time.get_ticks_msec() > _talk_hide_at:
 		_talk_icon.visible = false
 	# Respiration : plus le personnage est abîmé, plus il halète.
+	# (relative à l'échelle du modèle, qui n'est plus 1:1)
 	var breath_freq := 2.0 + (100 - health.visual_state) * 0.04
-	_body.scale.y = 1.0 + sin(_time * breath_freq) * 0.015
+	_body.scale.y = _body_base_scale.y * (1.0 + sin(_time * breath_freq) * 0.015)
 	# Tremblements aux paliers bas — lisibles par les autres joueurs.
 	if _shake > 0.0:
 		_body.position = _body_base_pos + Vector3(

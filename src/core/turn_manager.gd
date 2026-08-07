@@ -35,7 +35,7 @@ func _process(delta: float) -> void:
 	if not _sudden_death:
 		if _match_elapsed >= GameConfig.sudden_death_seconds:
 			_sudden_death = true
-			EventBus.log_public.emit("💀 MORT SUBITE ! La taverne réclame un vainqueur — la vie de chacun s'écoule…")
+			EventBus.log_public.emit(Lang.t("💀 MORT SUBITE ! La taverne réclame un vainqueur — la vie de chacun s'écoule…"))
 		return
 	_drip_accumulator += delta
 	while _drip_accumulator >= 1.0:
@@ -49,7 +49,7 @@ func start_match(p_players: Array) -> void:
 	match_running = true
 	EventBus.draw_requested.connect(_on_draw_requested)
 	EventBus.player_died.connect(_on_player_died)
-	EventBus.log_public.emit("🎴 La partie commence ! Que le meilleur menteur gagne.")
+	EventBus.log_public.emit(Lang.t("🎴 La partie commence ! Que le meilleur menteur gagne."))
 	_next_turn()
 
 func current_player():
@@ -85,7 +85,7 @@ func _watch_stalling(character, turn_id: int) -> void:
 	EventBus.stalling_player = character
 	EventBus.stalling_started.emit(character)
 	EventBus.log_public.emit(
-		"🪨 %s fait traîner la partie… Caillassage autorisé jusqu'à ce qu'il pioche !"
+		Lang.t("🪨 %s fait traîner la partie… Caillassage autorisé jusqu'à ce qu'il pioche !")
 		% character.display_name)
 
 func _clear_stalling() -> void:
@@ -99,19 +99,19 @@ func _on_draw_requested(character) -> void:
 		return
 	if character != current_player():
 		if not character.is_bot:
-			EventBus.log_private.emit(character, "⛔ Ce n'est pas ton tour !")
+			EventBus.log_private.emit(character, Lang.t("⛔ Ce n'est pas ton tour !"))
 		return
 	if not _awaiting_draw:
 		return
 	# On pioche depuis sa chaise, pas en vadrouille autour de la table.
 	if not character.is_seated:
 		if not character.is_bot:
-			EventBus.log_private.emit(character, "🪑 Reviens t'asseoir pour piocher ! (touche E)")
+			EventBus.log_private.emit(character, Lang.t("🪑 Reviens t'asseoir pour piocher ! (touche E)"))
 		return
 	_awaiting_draw = false
 	if EventBus.stalling_player == character:
 		_clear_stalling()
-		EventBus.log_public.emit("😮‍💨 %s pioche enfin. On repose les cailloux."
+		EventBus.log_public.emit(Lang.t("😮‍💨 %s pioche enfin. On repose les cailloux.")
 			% character.display_name)
 
 	var card: Dictionary = CardDatabase.draw_card()
@@ -138,7 +138,7 @@ func _on_draw_requested(character) -> void:
 func _on_player_died(character, cause: String) -> void:
 	if not match_running:
 		return
-	EventBus.log_public.emit("💀 %s est hors-jeu ! (%s)" % [character.display_name, cause])
+	EventBus.log_public.emit(Lang.t("💀 %s est hors-jeu ! (%s)") % [character.display_name, Lang.t(cause)])
 	var alive := _alive_players()
 	if alive.size() <= 1 or _same_chain(alive) or _same_team(alive):
 		_end_match(alive[0] if alive.size() >= 1 else null)
@@ -163,8 +163,8 @@ func _same_chain(alive: Array) -> bool:
 	var names: Array[String] = []
 	for character in alive:
 		names.append(character.display_name)
-	EventBus.log_public.emit("⛓️ Enchaînés jusqu'au bout : %s remportent la partie ENSEMBLE !"
-		% " et ".join(names))
+	EventBus.log_public.emit(Lang.t("⛓️ Enchaînés jusqu'au bout : %s remportent la partie ENSEMBLE !")
+		% Lang.t(" et ").join(names))
 	return true
 
 ## Mode Équipes : victoire quand tous les survivants portent le même bandeau.
@@ -175,8 +175,8 @@ func _same_team(alive: Array) -> bool:
 	for character in alive:
 		if character.team != team:
 			return false
-	EventBus.log_public.emit("⚔️ L'équipe %s remporte la partie !"
-		% alive[0].TEAM_NAMES[team])
+	EventBus.log_public.emit(Lang.t("⚔️ L'équipe %s remporte la partie !")
+		% Lang.t(alive[0].TEAM_NAMES[team]))
 	return true
 
 func _end_match(winner) -> void:
@@ -192,10 +192,10 @@ func _end_match(winner) -> void:
 				boldest = player
 		if boldest != null and boldest.points > 0:
 			winner = boldest
-			EventBus.log_public.emit("⚖️ Double KO ! L'audace départage : %s l'emporte avec %d point%s !"
+			EventBus.log_public.emit(Lang.t("⚖️ Double KO ! L'audace départage : %s l'emporte avec %d point%s !")
 				% [winner.display_name, winner.points, "s" if winner.points > 1 else ""])
 	if winner != null:
-		EventBus.log_public.emit("🏆 %s remporte la Dernière Carte !" % winner.display_name)
+		EventBus.log_public.emit(Lang.t("🏆 %s remporte la Dernière Carte !") % winner.display_name)
 	else:
-		EventBus.log_public.emit("💀 Personne n'a survécu… La table gagne.")
+		EventBus.log_public.emit(Lang.t("💀 Personne n'a survécu… La table gagne."))
 	EventBus.match_ended.emit(winner)

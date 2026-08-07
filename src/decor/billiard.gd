@@ -181,10 +181,10 @@ func _on_pocket_entered(body: Node3D) -> void:
 	if _last_striker != null and is_instance_valid(_last_striker) and _last_striker.is_alive():
 		_last_striker.points += 1
 		EventBus.points_changed.emit(_last_striker, _last_striker.points)
-		EventBus.log_public.emit("🎱 %s empoche une bille ! (+1 point d'audace)"
+		EventBus.log_public.emit(Lang.t("🎱 %s empoche une bille ! (+1 point d'audace)")
 			% _last_striker.display_name)
 	else:
-		EventBus.log_public.emit("🎱 Une bille tombe dans la poche…")
+		EventBus.log_public.emit(Lang.t("🎱 Une bille tombe dans la poche…"))
 	# Plus qu'une bille en jeu ? On retriangule.
 	var remaining := 0
 	for ball in _balls:

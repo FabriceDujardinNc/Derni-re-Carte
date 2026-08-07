@@ -58,7 +58,7 @@ func _ready() -> void:
 		# Déjà lu cette session : prêt immédiatement, mais on LE DIT clairement
 		# (sinon on croit à un bug quand les autres lisent encore).
 		_finish()
-		_flash_notice("✅ Tutoriel déjà lu — tu es prêt !   (P : le relire)")
+		_flash_notice(Lang.t("✅ Tutoriel déjà lu — tu es prêt !   (P : le relire)"))
 	else:
 		_show_page(0)
 
@@ -127,9 +127,9 @@ func _show_page(index: int) -> void:
 	_page = index
 	_panel.visible = true
 	var page: Dictionary = PAGES[index]
-	_title.text = page["title"]
-	_text.text = page["text"]
-	_progress.text = "ENTRÉE : suivant · P : tout passer          %d / %d" % [index + 1, PAGES.size()]
+	_title.text = Lang.t(page["title"])
+	_text.text = Lang.t(page["text"])
+	_progress.text = Lang.t("ENTRÉE : suivant · P : tout passer          %d / %d") % [index + 1, PAGES.size()]
 	_spawn_arrows(page["targets"])
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -171,7 +171,7 @@ func _finish() -> void:
 	_clear_arrows()
 	Net.tutorial_ready()
 	if Net.active and not EventBus.match_started:
-		_waiting.text = "⏳ En attente des autres joueurs…"
+		_waiting.text = Lang.t("⏳ En attente des autres joueurs…")
 		_waiting.visible = true
 
 func _on_waiting(names: Array) -> void:
@@ -180,7 +180,7 @@ func _on_waiting(names: Array) -> void:
 		return
 	_waiting.visible = true
 	if _done:
-		_waiting.text = "⏳ Encore en train de lire le tutoriel : %s" % ", ".join(names)
+		_waiting.text = Lang.t("⏳ Encore en train de lire le tutoriel : %s") % ", ".join(names)
 
 # ---------------------------------------------------------------- Flèches 3D
 

@@ -36,15 +36,15 @@ func _direction_loop() -> void:
 func _trigger(event_name: String) -> void:
 	match event_name:
 		"blackout":
-			EventBus.log_public.emit("⚡ Les lumières de la taverne s'éteignent d'un coup !")
+			EventBus.log_public.emit(Lang.t("⚡ Les lumières de la taverne s'éteignent d'un coup !"))
 		"storm":
-			EventBus.log_public.emit("🌩️ Un orage éclate au-dessus de la taverne !")
+			EventBus.log_public.emit(Lang.t("🌩️ Un orage éclate au-dessus de la taverne !"))
 		"chickens":
-			EventBus.log_public.emit("🐔 Attendez… IL PLEUT DES POULETS ?!")
+			EventBus.log_public.emit(Lang.t("🐔 Attendez… IL PLEUT DES POULETS ?!"))
 		"shake":
-			EventBus.log_public.emit("💥 Toute la taverne se met à trembler !")
+			EventBus.log_public.emit(Lang.t("💥 Toute la taverne se met à trembler !"))
 		"fake":
 			# Aucun log : juste un bruit inquiétant venu de nulle part.
-			EventBus.fake_event.emit("🔊 Un grondement sourd parcourt la taverne…")
+			EventBus.fake_event.emit(Lang.t("🔊 Un grondement sourd parcourt la taverne…"))
 			return
 	EventBus.director_event.emit(event_name)

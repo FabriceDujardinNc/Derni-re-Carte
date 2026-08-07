@@ -44,7 +44,7 @@ func _enter_spectator(_cause: String) -> void:
 		return
 	camera.reparent(get_tree().current_scene)
 	_orbit_yaw = character.rotation.y + PI
-	EventBus.log_private.emit(character, "👻 Mode spectateur — souris : orbiter · molette : zoomer.")
+	EventBus.log_private.emit(character, Lang.t("👻 Mode spectateur — souris : orbiter · molette : zoomer."))
 	_update_orbit()
 
 func _update_orbit() -> void:
@@ -232,9 +232,9 @@ func _peek_at_nearby_hand() -> void:
 	_last_spied = closest
 	var contents: Array[String] = []
 	for card in closest.hand:
-		contents.append("%s %s" % [card.get("emoji", ""), card.get("name", "?")])
-	var summary := ", ".join(contents) if not contents.is_empty() else "rien du tout"
-	EventBus.log_private.emit(character, "🔍 Tu jettes un œil au sac de %s : il contient %s."
+		contents.append("%s %s" % [card.get("emoji", ""), Lang.t(card.get("name", "?"))])
+	var summary := ", ".join(contents) if not contents.is_empty() else Lang.t("rien du tout")
+	EventBus.log_private.emit(character, Lang.t("🔍 Tu jettes un œil au sac de %s : il contient %s.")
 		% [closest.display_name, summary])
 
 func _select_card(direction: int) -> void:
@@ -253,7 +253,7 @@ func _use_selected_card() -> void:
 			character.offer_flower(character)
 		return
 	if character.hand.is_empty():
-		EventBus.log_private.emit(character, "🎴 Aucune carte en réserve.")
+		EventBus.log_private.emit(character, Lang.t("🎴 Aucune carte en réserve."))
 		return
 	_selected_card = clampi(_selected_card, 0, character.hand.size() - 1)
 	var card: Dictionary = character.hand[_selected_card]
@@ -261,7 +261,7 @@ func _use_selected_card() -> void:
 		var target = _aimed_character()
 		if target == null or target == character:
 			EventBus.log_private.emit(character,
-				"🎯 Vise un joueur pour utiliser %s !" % card.get("name", "cette carte"))
+				Lang.t("🎯 Vise un joueur pour utiliser %s !") % Lang.t(card.get("name", "cette carte")))
 			return
 		if Net.client_mode():
 			Net.send_use_card(_selected_card, Net.seat_of(target))
@@ -316,13 +316,13 @@ func _try_steal(target) -> void:
 	if not EventBus.match_started:
 		return
 	if character.is_seated:
-		EventBus.log_private.emit(character, "🫳 Lève-toi (E) pour tenter un vol.")
+		EventBus.log_private.emit(character, Lang.t("🫳 Lève-toi (E) pour tenter un vol."))
 		return
 	if target.hand.is_empty():
-		EventBus.log_private.emit(character, "🫳 Le sac de %s est vide." % target.display_name)
+		EventBus.log_private.emit(character, Lang.t("🫳 Le sac de %s est vide.") % target.display_name)
 		return
 	if character.hand.size() >= CharacterBase.HAND_SIZE:
-		EventBus.log_private.emit(character, "🫳 Ton propre sac est plein !")
+		EventBus.log_private.emit(character, Lang.t("🫳 Ton propre sac est plein !"))
 		return
 	var minigames := get_tree().get_nodes_in_group("steal_minigame")
 	if not minigames.is_empty():

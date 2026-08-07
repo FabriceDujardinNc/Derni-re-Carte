@@ -46,7 +46,7 @@ func begin(thief, victim) -> void:
 	if _active:
 		return
 	if Time.get_ticks_msec() < _cooldown_until:
-		EventBus.log_private.emit(thief, "🫳 Le sac s'est refermé il y a peu… patiente un peu.")
+		EventBus.log_private.emit(thief, Lang.t("🫳 Le sac s'est refermé il y a peu… patiente un peu."))
 		return
 	_thief = thief
 	_victim = victim
@@ -56,7 +56,7 @@ func begin(thief, victim) -> void:
 	_cursor_time = 0.0
 	EventBus.steal_open = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_title.text = "🫳 Fouille du sac de %s…" % victim.display_name
+	_title.text = Lang.t("🫳 Fouille du sac de %s…") % victim.display_name
 	_cards_row.visible = false
 	_track.visible = true
 	_randomize_zone()
@@ -89,7 +89,7 @@ func _end(reason: String) -> void:
 
 func _on_thief_damaged(_amount: int, _source: String) -> void:
 	_cooldown_until = Time.get_ticks_msec() + int(FAIL_COOLDOWN * 1000)
-	_end("🫳 Interrompu en plein travail ! Le sac s'est refermé.")
+	_end(Lang.t("🫳 Interrompu en plein travail ! Le sac s'est refermé."))
 
 # ---------------------------------------------------------------- Surveillance
 
@@ -99,7 +99,7 @@ func _process(delta: float) -> void:
 	# La cible s'éloigne ?
 	if not is_instance_valid(_victim) or not _victim.is_alive() \
 			or _thief.global_position.distance_to(_victim.global_position) > RANGE_LIMIT:
-		_end("🫳 La cible s'est éloignée. Tentative annulée.")
+		_end(Lang.t("🫳 La cible s'est éloignée. Tentative annulée."))
 		return
 	# FLAGRANT DÉLIT : la victime s'est retournée et te fait face.
 	var to_thief: Vector3 = (_thief.global_position - _victim.global_position).normalized()
@@ -108,10 +108,10 @@ func _process(delta: float) -> void:
 		if Net.client_mode():
 			Net.send_steal_caught()
 		else:
-			_thief.health.take_damage(CAUGHT_DAMAGE, "Pris la main dans le sac")
-			EventBus.log_public.emit("😤 %s a surpris %s la main dans son sac !"
+			_thief.health.take_damage(CAUGHT_DAMAGE, Lang.t("Pris la main dans le sac"))
+			EventBus.log_public.emit(Lang.t("😤 %s a surpris %s la main dans son sac !")
 				% [_victim.display_name, _thief.display_name])
-		_end("😤 FLAGRANT DÉLIT ! Tu t'es fait surprendre.")
+		_end(Lang.t("😤 FLAGRANT DÉLIT ! Tu t'es fait surprendre."))
 		return
 	# Curseur du crochetage.
 	if _phase == "picking":
@@ -123,7 +123,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _active:
 		return
 	if event.is_action_pressed("ui_cancel"):
-		_end("🫳 Tu renonces discrètement.")
+		_end(Lang.t("🫳 Tu renonces discrètement."))
 		get_viewport().set_input_as_handled()
 		return
 	if _phase == "picking" and event.is_action_pressed("draw_card"):
@@ -141,7 +141,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		else:
 			_cooldown_until = Time.get_ticks_msec() + int(FAIL_COOLDOWN * 1000)
 			Audio.play("impact", -8.0)
-			_end("🫳 Raté ! Le sac s'est refermé d'un coup sec.")
+			_end(Lang.t("🫳 Raté ! Le sac s'est refermé d'un coup sec."))
 
 # ---------------------------------------------------------------- Phases
 
@@ -152,14 +152,14 @@ func _randomize_zone() -> void:
 	_zone.size.x = width * _track.size.x
 
 func _update_progress() -> void:
-	_progress.text = "Verrou %d / %d — ESPACE dans la zone verte · Échap : renoncer" % [_pin + 1, PIN_COUNT]
+	_progress.text = Lang.t("Verrou %d / %d — ESPACE dans la zone verte · Échap : renoncer") % [_pin + 1, PIN_COUNT]
 
 ## Les trois verrous ont cédé : choisir UNE carte du butin.
 func _show_card_choice() -> void:
 	_phase = "choosing"
 	_track.visible = false
-	_title.text = "🫳 Le sac de %s est ouvert. Choisis TA carte :" % _victim.display_name
-	_progress.text = "Vite, avant qu'il ne se retourne…"
+	_title.text = Lang.t("🫳 Le sac de %s est ouvert. Choisis TA carte :") % _victim.display_name
+	_progress.text = Lang.t("Vite, avant qu'il ne se retourne…")
 	for child in _cards_row.get_children():
 		child.queue_free()
 	for i in _victim.hand.size():

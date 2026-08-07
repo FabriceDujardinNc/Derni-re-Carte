@@ -85,12 +85,12 @@ func _on_connected_to_server() -> void:
 func _on_connection_failed() -> void:
 	print("Net : connexion impossible (IP/port injoignables).")
 	leave()
-	join_failed.emit("Connexion impossible : vérifie l'IP et que l'hôte a bien cliqué Héberger.")
+	join_failed.emit(Lang.t("Connexion impossible : vérifie l'IP et que l'hôte a bien cliqué Héberger."))
 
 func _on_server_disconnected() -> void:
 	print("Net : déconnecté par l'hôte.")
 	leave()
-	join_failed.emit("Déconnecté par l'hôte.")
+	join_failed.emit(Lang.t("Déconnecté par l'hôte."))
 
 func _on_peer_disconnected(peer_id: int) -> void:
 	if not is_server:
@@ -106,7 +106,7 @@ func _on_peer_disconnected(peer_id: int) -> void:
 			var character = _char(i)
 			if character != null and is_instance_valid(character) and character.is_alive():
 				character.add_child(BotBrain.new())
-				EventBus.log_public.emit("🤖 %s a quitté la partie — un bot prend le relais."
+				EventBus.log_public.emit(Lang.t("🤖 %s a quitté la partie — un bot prend le relais.")
 					% character.display_name)
 
 func leave() -> void:
@@ -127,14 +127,14 @@ func request_join(pwd: String, player_name: String, color: int, version: String 
 	var sender := multiplayer.get_remote_sender_id()
 	if version != GameConfig.VERSION:
 		print("Net : joueur %d refusé (version %s ≠ %s)." % [sender, version, GameConfig.VERSION])
-		reject_join.rpc_id(sender, "Versions différentes (hôte %s, toi %s) : téléchargez la même release !"
+		reject_join.rpc_id(sender, Lang.t("Versions différentes (hôte %s, toi %s) : téléchargez la même release !")
 			% [GameConfig.VERSION, version])
 		await get_tree().create_timer(0.5).timeout
 		multiplayer.multiplayer_peer.disconnect_peer(sender)
 		return
 	if pwd != password:
 		print("Net : joueur %d refusé (mauvais mot de passe)." % sender)
-		reject_join.rpc_id(sender, "Mot de passe incorrect.")
+		reject_join.rpc_id(sender, Lang.t("Mot de passe incorrect."))
 		await get_tree().create_timer(0.5).timeout
 		multiplayer.multiplayer_peer.disconnect_peer(sender)
 		return

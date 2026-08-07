@@ -72,7 +72,7 @@ func _ready() -> void:
 			_refresh_hand())
 	EventBus.points_changed.connect(func(c, points: int) -> void:
 		if c == local_player:
-			_points_label.text = "⭐ %d point%s d'audace" % [points, "s" if points > 1 else ""])
+			_points_label.text = Lang.t("⭐ %d point%s d'audace") % [points, "s" if points > 1 else ""])
 	# État du joueur local uniquement.
 	local_player.health.hp_changed.connect(_on_hp_changed)
 	local_player.health.shield_changed.connect(_on_shield_changed)
@@ -126,7 +126,7 @@ func _build_ui() -> void:
 	hp_box.add_child(_shield_label)
 
 	_points_label = Label.new()
-	_points_label.text = "⭐ 0 point d'audace"
+	_points_label.text = Lang.t("⭐ 0 point d'audace")
 	_points_label.modulate = Color(1, 0.9, 0.5)
 	hp_box.add_child(_points_label)
 
@@ -198,7 +198,7 @@ func _build_ui() -> void:
 
 	# Grand rappel de pioche, au centre : impossible de rater son tour.
 	_draw_prompt = Label.new()
-	_draw_prompt.text = "🎯 À TOI DE PIOCHER !\nESPACE — ou clique sur la pioche qui brille"
+	_draw_prompt.text = Lang.t("🎯 À TOI DE PIOCHER !\nESPACE — ou clique sur la pioche qui brille")
 	_draw_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_draw_prompt.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	_draw_prompt.offset_left = -300
@@ -214,7 +214,7 @@ func _build_ui() -> void:
 
 	# ⚠️ Warning de vol : quelqu'un fouille TON sac.
 	_theft_label = Label.new()
-	_theft_label.text = "⚠️ QUELQU'UN FOUILLE TON SAC !! ⚠️"
+	_theft_label.text = Lang.t("⚠️ QUELQU'UN FOUILLE TON SAC !! ⚠️")
 	_theft_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_theft_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	_theft_label.offset_top = 150
@@ -279,7 +279,7 @@ func _build_ui() -> void:
 	root.add_child(hand_box)
 
 	var hand_title := Label.new()
-	hand_title.text = "🎴 Main :"
+	hand_title.text = Lang.t("🎴 Main :")
 	hand_box.add_child(hand_title)
 	for i in CharacterBase.HAND_SIZE:
 		var slot := Label.new()
@@ -289,7 +289,7 @@ func _build_ui() -> void:
 
 	# Champ de chat texte (T pour ouvrir, Entrée pour envoyer, Échap pour fermer).
 	_chat_input = LineEdit.new()
-	_chat_input.placeholder_text = "Ton message… (Entrée : envoyer · Échap : annuler)"
+	_chat_input.placeholder_text = Lang.t("Ton message… (Entrée : envoyer · Échap : annuler)")
 	_chat_input.max_length = 90
 	_chat_input.anchor_left = 0.5
 	_chat_input.anchor_right = 0.5
@@ -320,7 +320,7 @@ func _build_ui() -> void:
 
 	# Rappel des contrôles (bas, centré).
 	var hint := Label.new()
-	hint.text = "ESPACE : piocher · R : révéler · clic droit : utiliser · E : se lever · ZQSD : marcher · V : parler · T : chat · 1-4 : émotes · Échap : pause"
+	hint.text = Lang.t("ESPACE : piocher · R : révéler · clic droit : utiliser · E : se lever · ZQSD : marcher · V : parler · T : chat · 1-4 : émotes · Échap : pause")
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	hint.offset_top = -32
@@ -332,11 +332,11 @@ func _build_ui() -> void:
 
 func _on_turn_started(character) -> void:
 	if character == local_player:
-		_turn_label.text = "🎯 À TOI — appuie sur ESPACE pour piocher"
+		_turn_label.text = Lang.t("🎯 À TOI — appuie sur ESPACE pour piocher")
 		_turn_label.add_theme_color_override("font_color", Color(1, 0.85, 0.3))
 		_show_draw_prompt(true)
 	else:
-		_turn_label.text = "Au tour de %s…" % character.display_name
+		_turn_label.text = Lang.t("Au tour de %s…") % character.display_name
 		_turn_label.add_theme_color_override("font_color", Color.WHITE)
 		_show_draw_prompt(false)
 
@@ -351,16 +351,16 @@ func _show_draw_prompt(shown: bool) -> void:
 		_draw_prompt_tween.tween_property(_draw_prompt, "modulate:a", 1.0, 0.5)
 
 func _on_card_drawn(character, card: Dictionary) -> void:
-	_add_log("🃏 %s pioche une carte…" % character.display_name, Color(0.8, 0.8, 0.85))
+	_add_log(Lang.t("🃏 %s pioche une carte…") % character.display_name, Color(0.8, 0.8, 0.85))
 	if character == local_player:
 		_show_draw_prompt(false)
 		_show_card(card)
 
 func _show_card(card: Dictionary) -> void:
 	var category: String = card.get("category", "neutral")
-	_card_title.text = "%s %s" % [card.get("emoji", ""), card.get("name", "?")]
+	_card_title.text = "%s %s" % [card.get("emoji", ""), Lang.t(card.get("name", "?"))]
 	_card_title.add_theme_color_override("font_color", CATEGORY_COLORS.get(category, Color.WHITE))
-	_card_desc.text = card.get("description", "")
+	_card_desc.text = Lang.t(card.get("description", ""))
 	_card_panel.visible = true
 	# Volontairement AUCUNE trace dans le journal : ta carte n'existe nulle part
 	# par écrit tant que tu ne la révèles pas toi-même (touche R = +1 point).
@@ -426,23 +426,23 @@ func _build_end_screen(winner) -> void:
 	title.add_theme_font_size_override("font_size", 32)
 	title.add_theme_color_override("font_color", Color(0.95, 0.85, 0.45))
 	if GameConfig.mode == "teams" and winner != null:
-		title.text = "%s🏆 L'équipe %s remporte la partie !" % [
-			winner.TEAM_EMOJIS[winner.team], winner.TEAM_NAMES[winner.team]]
+		title.text = Lang.t("%s🏆 L'équipe %s remporte la partie !") % [
+			winner.TEAM_EMOJIS[winner.team], Lang.t(winner.TEAM_NAMES[winner.team])]
 		if local_player in winners:
-			title.text += "\n(la TIENNE !)"
+			title.text += "\n" + Lang.t("(la TIENNE !)")
 	elif winners.size() > 1:
 		var names: Array[String] = []
 		for character in winners:
 			names.append(character.display_name)
-		title.text = "⛓️🏆 %s remportent la partie ENSEMBLE !" % " & ".join(names)
+		title.text = Lang.t("⛓️🏆 %s remportent la partie ENSEMBLE !") % " & ".join(names)
 		if local_player in winners:
-			title.text += "\n(et TU en fais partie !)"
+			title.text += "\n" + Lang.t("(et TU en fais partie !)")
 	elif winner == local_player:
-		title.text = "🏆 TU remportes la Dernière Carte !"
+		title.text = Lang.t("🏆 TU remportes la Dernière Carte !")
 	elif winner != null:
-		title.text = "🏆 %s remporte la Dernière Carte !" % winner.display_name
+		title.text = Lang.t("🏆 %s remporte la Dernière Carte !") % winner.display_name
 	else:
-		title.text = "💀 Personne n'a survécu…"
+		title.text = Lang.t("💀 Personne n'a survécu…")
 	box.add_child(title)
 
 	box.add_child(HSeparator.new())
@@ -470,7 +470,7 @@ func _build_end_screen(winner) -> void:
 		dot.add_theme_color_override("font_color", character.color)
 		row.add_child(dot)
 		var name_label := Label.new()
-		name_label.text = character.display_name + ("  (toi)" if character == local_player else "")
+		name_label.text = character.display_name + (Lang.t("  (toi)") if character == local_player else "")
 		if not character.is_alive():
 			name_label.text += "  💀"
 			name_label.modulate = Color(1, 1, 1, 0.55)
@@ -491,7 +491,7 @@ func _build_end_screen(winner) -> void:
 	if local_player != null and local_player.points > 0:
 		var bank_label := Label.new()
 		bank_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		bank_label.text = "⭐ +%d d'audace en réserve (total : %d) — dépense-les au menu !" \
+		bank_label.text = Lang.t("⭐ +%d d'audace en réserve (total : %d) — dépense-les au menu !") \
 			% [local_player.points, GameConfig.audace_bank]
 		bank_label.add_theme_color_override("font_color", Color(1, 0.9, 0.5))
 		box.add_child(bank_label)
@@ -500,14 +500,14 @@ func _build_end_screen(winner) -> void:
 	buttons.add_theme_constant_override("separation", 12)
 	box.add_child(buttons)
 	var replay := Button.new()
-	replay.text = "🔄  Rejouer  (R)"
+	replay.text = Lang.t("🔄  Rejouer  (R)")
 	replay.custom_minimum_size = Vector2(0, 46)
 	replay.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	UiKit.style_button(replay, UiKit.ACCENT, 20)
 	replay.pressed.connect(func() -> void: get_tree().reload_current_scene())
 	buttons.add_child(replay)
 	var menu_button := Button.new()
-	menu_button.text = "🏠  Menu  (M)"
+	menu_button.text = Lang.t("🏠  Menu  (M)")
 	menu_button.custom_minimum_size = Vector2(0, 46)
 	menu_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	UiKit.style_button(menu_button, UiKit.ACCENT_BLUE, 20)
@@ -529,36 +529,36 @@ func _on_log_private(character, message: String) -> void:
 		return
 	_add_log(message, Color(0.65, 0.65, 0.7))
 	# Frémissement de chaîne : petit tintement + alerte discrète.
-	if message.begins_with("⛓️ Ta chaîne frémit"):
+	if message.begins_with(Lang.t("⛓️ Ta chaîne frémit")):
 		Audio.play("goupille", -8.0)
-		_flash_alert("⛓️ Ta chaîne frémit… il est tout près.", Color(0.8, 0.85, 1.0), 1.6)
+		_flash_alert(Lang.t("⛓️ Ta chaîne frémit… il est tout près."), Color(0.8, 0.85, 1.0), 1.6)
 
 func _on_fake_event(message: String) -> void:
 	# Le faux indice ressemble à un vrai : personne ne sait qu'il ne s'est RIEN passé.
 	_add_log(message, Color(1.0, 0.85, 0.5))
 
 func _on_emote_played(character, emote: String) -> void:
-	_add_log("%s réagit : %s" % [character.display_name, emote], Color(0.7, 0.8, 1.0))
+	_add_log(Lang.t("%s réagit : %s") % [character.display_name, emote], Color(0.7, 0.8, 1.0))
 
 func _on_status_applied(character, status_name: String) -> void:
 	if character == local_player:
-		_add_log("⚠️ Statut subi : %s" % status_name, Color(1.0, 0.6, 0.4))
+		_add_log(Lang.t("⚠️ Statut subi : %s") % status_name, Color(1.0, 0.6, 0.4))
 
 func _on_card_stored(character, card: Dictionary) -> void:
 	if character == local_player:
-		_add_log("🎴 %s %s gardée en main (clic droit pour l'utiliser)."
-			% [card.get("emoji", ""), card.get("name", "?")], Color(0.6, 0.8, 1.0))
+		_add_log(Lang.t("🎴 %s %s gardée en main (clic droit pour l'utiliser).")
+			% [card.get("emoji", ""), Lang.t(card.get("name", "?"))], Color(0.6, 0.8, 1.0))
 		_refresh_hand()
 
 ## Une carte utilisée est une action VISIBLE : elle est révélée à tous.
 func _on_card_used(user, card: Dictionary, target) -> void:
 	if target != null and target != user:
-		_add_log("💥 %s lance %s %s sur %s !" % [user.display_name,
-			card.get("emoji", ""), card.get("name", "?"), target.display_name],
+		_add_log(Lang.t("💥 %s lance %s %s sur %s !") % [user.display_name,
+			card.get("emoji", ""), Lang.t(card.get("name", "?")), target.display_name],
 			Color(1.0, 0.7, 0.4))
 	else:
-		_add_log("✨ %s utilise %s %s." % [user.display_name,
-			card.get("emoji", ""), card.get("name", "?")], Color(0.6, 0.9, 0.7))
+		_add_log(Lang.t("✨ %s utilise %s %s.") % [user.display_name,
+			card.get("emoji", ""), Lang.t(card.get("name", "?"))], Color(0.6, 0.9, 0.7))
 	if user == local_player:
 		_refresh_hand()
 
@@ -573,7 +573,7 @@ func _refresh_hand() -> void:
 		var slot := _hand_slots[i]
 		if i < local_player.hand.size():
 			var card: Dictionary = local_player.hand[i]
-			slot.text = "%s %s" % [card.get("emoji", ""), card.get("name", "?")]
+			slot.text = "%s %s" % [card.get("emoji", ""), Lang.t(card.get("name", "?"))]
 			var selected := i == _hand_selected
 			slot.modulate = Color(1, 0.9, 0.4) if selected else Color(1, 1, 1, 0.8)
 		else:
@@ -597,7 +597,7 @@ func _flash_alert(text: String, color: Color, duration := 2.5) -> void:
 func _on_chain_echo(character) -> void:
 	if character != local_player:
 		return
-	_flash_alert("🩸 Ton enchaîné vient d'encaisser ! Qui a été touché à l'instant ?",
+	_flash_alert(Lang.t("🩸 Ton enchaîné vient d'encaisser ! Qui a été touché à l'instant ?"),
 		Color(1.0, 0.45, 0.45))
 	Audio.play("heart", -2.0)
 	var second_beat := create_tween()
@@ -639,7 +639,7 @@ func _on_chat_submitted(text: String) -> void:
 	local_player.say(clean)
 
 func _on_chat_message(character, text: String) -> void:
-	_add_log("💬 %s : %s" % [character.display_name, text], character.color.lightened(0.35))
+	_add_log(Lang.t("💬 %s : %s") % [character.display_name, text], character.color.lightened(0.35))
 
 # ---------------------------------------------------------------- Vol à la tire
 
@@ -681,12 +681,12 @@ func _process(delta: float) -> void:
 		else:
 			_timer_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.95, 0.8))
 	else:
-		_timer_label.text = "💀 MORT SUBITE"
+		_timer_label.text = Lang.t("💀 MORT SUBITE")
 		_timer_label.add_theme_color_override("font_color",
 			Color(1.0, 0.25 + 0.25 * absf(sin(_timer_elapsed * 5.0)), 0.2))
 		if not _sudden_death_announced:
 			_sudden_death_announced = true
-			_flash_alert("💀 MORT SUBITE — la vie de chacun s'écoule !", Color(1.0, 0.3, 0.25), 4.0)
+			_flash_alert(Lang.t("💀 MORT SUBITE — la vie de chacun s'écoule !"), Color(1.0, 0.3, 0.25), 4.0)
 			Audio.play("alarm", -2.0)
 
 ## Échauffement : gros chiffres au centre, cailloux gratuits, puis GO.
@@ -695,11 +695,11 @@ func _on_countdown_tick(n: int) -> void:
 	_countdown_label.pivot_offset = _countdown_label.size / 2.0
 	if n > 0:
 		_countdown_label.text = str(n)
-		_turn_label.text = "🪨 ÉCHAUFFEMENT — défoulez-vous, tout sera pardonné !"
+		_turn_label.text = Lang.t("🪨 ÉCHAUFFEMENT — défoulez-vous, tout sera pardonné !")
 		_turn_label.add_theme_color_override("font_color", Color(1, 0.7, 0.3))
 		Audio.play("click", -4.0)
 	else:
-		_countdown_label.text = "🎴 GO !"
+		_countdown_label.text = Lang.t("🎴 GO !")
 		_turn_label.text = ""
 		Audio.play("ding", -2.0)
 		# Le chrono de mort subite démarre au GO.
@@ -716,9 +716,9 @@ func _on_countdown_tick(n: int) -> void:
 
 func _on_stalling_started(lambin) -> void:
 	if lambin == local_player:
-		_stoning_label.text = "🪨 TU TE FAIS LAPIDER — PIOCHE !! 🪨"
+		_stoning_label.text = Lang.t("🪨 TU TE FAIS LAPIDER — PIOCHE !! 🪨")
 	else:
-		_stoning_label.text = "🪨 LAPIDATION AUTORISÉE sur %s ! (clic gauche) 🪨" % lambin.display_name
+		_stoning_label.text = Lang.t("🪨 LAPIDATION AUTORISÉE sur %s ! (clic gauche) 🪨") % lambin.display_name
 	_stoning_label.visible = true
 	if _stoning_tween and _stoning_tween.is_valid():
 		_stoning_tween.kill()
@@ -740,10 +740,10 @@ func _on_shield_changed(shield: int) -> void:
 	_shield_label.text = "🛡️ %d" % shield if shield > 0 else ""
 
 func _on_local_damaged(amount: int, source: String) -> void:
-	_add_log("💥 -%d PV (%s)" % [amount, source], Color(1.0, 0.45, 0.4))
+	_add_log(Lang.t("💥 -%d PV (%s)") % [amount, Lang.t(source)], Color(1.0, 0.45, 0.4))
 
 func _on_local_healed(amount: int) -> void:
-	_add_log("💚 +%d PV" % amount, Color(0.5, 1.0, 0.5))
+	_add_log(Lang.t("💚 +%d PV") % amount, Color(0.5, 1.0, 0.5))
 
 func _add_log(text: String, color: Color = Color(0.9, 0.9, 0.95)) -> void:
 	_log.append_text("[color=#%s]%s[/color]\n" % [color.to_html(false), text])

@@ -76,7 +76,7 @@ func _build_ui() -> void:
 
 	# --- Titre ---
 	_title = Label.new()
-	_title.text = "🎴 Dernière Carte"
+	_title.text = Lang.t("🎴 Dernière Carte")
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title.add_theme_font_size_override("font_size", 54)
 	_title.add_theme_color_override("font_color", Color(0.95, 0.88, 0.72))
@@ -86,7 +86,7 @@ func _build_ui() -> void:
 	column.add_child(_title)
 
 	var subtitle := Label.new()
-	subtitle.text = "Que le meilleur menteur gagne."
+	subtitle.text = Lang.t("Que le meilleur menteur gagne.")
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.modulate = Color(1, 1, 1, 0.5)
 	column.add_child(subtitle)
@@ -102,14 +102,14 @@ func _build_ui() -> void:
 	_panel.add_child(form)
 
 	# Nom + nombre de joueurs sur la même logique de section.
-	form.add_child(_section_label("👤  Ton nom"))
+	form.add_child(_section_label(Lang.t("👤  Ton nom")))
 	_name_edit = LineEdit.new()
 	_name_edit.text = GameConfig.player_name
 	_name_edit.max_length = 16
 	_name_edit.custom_minimum_size = Vector2(0, 40)
 	form.add_child(_name_edit)
 
-	_count_label = _section_label("🪑  Joueurs à table : %d" % GameConfig.player_count)
+	_count_label = _section_label(Lang.t("🪑  Joueurs à table : %d") % GameConfig.player_count)
 	form.add_child(_count_label)
 	_count_slider = HSlider.new()
 	_count_slider.min_value = 2
@@ -118,10 +118,10 @@ func _build_ui() -> void:
 	_count_slider.value = GameConfig.player_count
 	_count_slider.custom_minimum_size = Vector2(0, 26)
 	_count_slider.value_changed.connect(func(value: float) -> void:
-		_count_label.text = "🪑  Joueurs à table : %d" % int(value))
+		_count_label.text = Lang.t("🪑  Joueurs à table : %d") % int(value))
 	form.add_child(_count_slider)
 
-	form.add_child(_section_label("🎨  Ta couleur"))
+	form.add_child(_section_label(Lang.t("🎨  Ta couleur")))
 	var color_row := HBoxContainer.new()
 	color_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	color_row.add_theme_constant_override("separation", 6)
@@ -142,14 +142,14 @@ func _build_ui() -> void:
 	_refresh_color_buttons()
 
 	# --- Mode de jeu ---
-	form.add_child(_section_label("⚔️  Mode de jeu"))
+	form.add_child(_section_label(Lang.t("⚔️  Mode de jeu")))
 	var mode_row := HBoxContainer.new()
 	mode_row.add_theme_constant_override("separation", 10)
 	form.add_child(mode_row)
 	var mode_definitions := [
-		["ffa", "🗡️ Chacun pour soi"],
-		["chains", "⛓️ Les Enchaînés"],
-		["teams", "⚔️ Équipes"],
+		["ffa", Lang.t("🗡️ Chacun pour soi")],
+		["chains", Lang.t("⛓️ Les Enchaînés")],
+		["teams", Lang.t("⚔️ Équipes")],
 	]
 	for definition in mode_definitions:
 		var mode_button := Button.new()
@@ -161,7 +161,7 @@ func _build_ui() -> void:
 		mode_row.add_child(mode_button)
 		_mode_buttons[definition[0]] = mode_button
 	var mode_hint := Label.new()
-	mode_hint.text = "Enchaînés : paires secrètes, si ton enchaîné meurt tu meurs · Équipes : Rouge vs Bleu, tir ami autorisé (4 joueurs min)."
+	mode_hint.text = Lang.t("Enchaînés : paires secrètes, si ton enchaîné meurt tu meurs · Équipes : Rouge vs Bleu, tir ami autorisé (4 joueurs min).")
 	mode_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	mode_hint.modulate = Color(1, 1, 1, 0.5)
 	form.add_child(mode_hint)
@@ -169,7 +169,7 @@ func _build_ui() -> void:
 	_refresh_mode_buttons()
 
 	# --- Boutique de chapeaux (l'audace gagnée en jouant sert ici) ---
-	_balance_label = _section_label("🎩  Ton chapeau — réserve : ⭐ %d" % GameConfig.audace_bank)
+	_balance_label = _section_label(Lang.t("🎩  Ton chapeau — réserve : ⭐ %d") % GameConfig.audace_bank)
 	form.add_child(_balance_label)
 	var hat_grid := GridContainer.new()
 	hat_grid.columns = 3
@@ -187,16 +187,16 @@ func _build_ui() -> void:
 	_refresh_hat_buttons()
 
 	# --- Difficulté des bots ---
-	form.add_child(_section_label("🤖  Difficulté des bots"))
+	form.add_child(_section_label(Lang.t("🤖  Difficulté des bots")))
 	var difficulty_row := HBoxContainer.new()
 	difficulty_row.add_theme_constant_override("separation", 6)
 	form.add_child(difficulty_row)
 	var difficulty_definitions := [
-		["facile", "😴 Facile"],
-		["moyen", "🙂 Moyen"],
-		["difficile", "😈 Difficile"],
+		["facile", Lang.t("😴 Facile")],
+		["moyen", Lang.t("🙂 Moyen")],
+		["difficile", Lang.t("😈 Difficile")],
 		["nightmare", "💀 Nightmare"],
-		["celeste", "🌟 Céleste"],
+		["celeste", Lang.t("🌟 Céleste")],
 	]
 	for definition in difficulty_definitions:
 		var difficulty_button := Button.new()
@@ -214,7 +214,7 @@ func _build_ui() -> void:
 
 	# --- Solo ---
 	var play := Button.new()
-	play.text = "▶   JOUER EN SOLO"
+	play.text = Lang.t("▶   JOUER EN SOLO")
 	play.custom_minimum_size = Vector2(0, 54)
 	UiKit.style_button(play, UiKit.ACCENT, 24)
 	play.pressed.connect(_on_play_pressed)
@@ -223,16 +223,16 @@ func _build_ui() -> void:
 	form.add_child(HSeparator.new())
 
 	# --- Multijoueur ---
-	var multi_title := _section_label("🌐  Multijoueur — héberge, ou rejoins avec IP + mot de passe")
+	var multi_title := _section_label(Lang.t("🌐  Multijoueur — héberge, ou rejoins avec IP + mot de passe"))
 	form.add_child(multi_title)
 
 	_password_edit = LineEdit.new()
-	_password_edit.placeholder_text = "Mot de passe de la partie (optionnel)"
+	_password_edit.placeholder_text = Lang.t("Mot de passe de la partie (optionnel)")
 	_password_edit.custom_minimum_size = Vector2(0, 38)
 	form.add_child(_password_edit)
 
 	_ip_edit = LineEdit.new()
-	_ip_edit.placeholder_text = "IP de l'hôte (ex : 192.168.1.10) — pour rejoindre"
+	_ip_edit.placeholder_text = Lang.t("IP de l'hôte (ex : 192.168.1.10) — pour rejoindre")
 	_ip_edit.custom_minimum_size = Vector2(0, 38)
 	form.add_child(_ip_edit)
 
@@ -240,14 +240,14 @@ func _build_ui() -> void:
 	multi_row.add_theme_constant_override("separation", 12)
 	form.add_child(multi_row)
 	var host_button := Button.new()
-	host_button.text = "🏠  Héberger"
+	host_button.text = Lang.t("🏠  Héberger")
 	host_button.custom_minimum_size = Vector2(0, 46)
 	host_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	UiKit.style_button(host_button, UiKit.ACCENT_BLUE, 20)
 	host_button.pressed.connect(_on_host_pressed)
 	multi_row.add_child(host_button)
 	var join_button := Button.new()
-	join_button.text = "🔗  Rejoindre"
+	join_button.text = Lang.t("🔗  Rejoindre")
 	join_button.custom_minimum_size = Vector2(0, 46)
 	join_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	UiKit.style_button(join_button, UiKit.ACCENT_BLUE, 20)
@@ -261,7 +261,7 @@ func _build_ui() -> void:
 
 	# --- Quitter ---
 	var quit := Button.new()
-	quit.text = "Quitter"
+	quit.text = Lang.t("Quitter")
 	quit.flat = true
 	quit.custom_minimum_size = Vector2(0, 34)
 	quit.modulate = Color(1, 1, 1, 0.55)
@@ -281,6 +281,21 @@ func _build_ui() -> void:
 	version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	version_label.modulate = Color(1, 1, 1, 0.4)
 	add_child(version_label)
+
+	# Bouton drapeau (haut droite) : bascule FR/EN puis reconstruit le menu.
+	var lang_button := Button.new()
+	lang_button.text = Lang.flag_label()
+	lang_button.custom_minimum_size = Vector2(128, 52)
+	UiKit.style_button(lang_button, UiKit.ACCENT_BLUE, 26)
+	lang_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	lang_button.offset_left = -148
+	lang_button.offset_top = 16
+	lang_button.offset_right = -20
+	lang_button.offset_bottom = 68
+	lang_button.pressed.connect(func() -> void:
+		Lang.toggle()
+		get_tree().reload_current_scene.call_deferred())
+	add_child(lang_button)
 
 func _section_label(text: String) -> Label:
 	var label := Label.new()
@@ -317,12 +332,12 @@ func _on_hat_pressed(hat_id: int) -> void:
 		Audio.play("win", -8.0)
 	else:
 		var price: int = GameConfig.HATS[hat_id]["price"]
-		_show_error("Il te faut ⭐ %d pour « %s » (réserve : %d). Joue avec audace !"
+		_show_error(Lang.t("Il te faut ⭐ %d pour « %s » (réserve : %d). Joue avec audace !")
 			% [price, GameConfig.HATS[hat_id]["name"], GameConfig.audace_bank])
 	_refresh_hat_buttons()
 
 func _refresh_hat_buttons() -> void:
-	_balance_label.text = "🎩  Ton chapeau — réserve : ⭐ %d" % GameConfig.audace_bank
+	_balance_label.text = Lang.t("🎩  Ton chapeau — réserve : ⭐ %d") % GameConfig.audace_bank
 	for i in _hat_buttons.size():
 		var hat: Dictionary = GameConfig.HATS[i]
 		if i in GameConfig.unlocked_hats:
@@ -375,7 +390,7 @@ func _on_host_pressed() -> void:
 	var error := Net.host_game(Net.DEFAULT_PORT, _password_edit.text.strip_edges(),
 		GameConfig.player_name, GameConfig.color_index)
 	if error != OK:
-		_show_error("Impossible d'ouvrir le port %d (déjà utilisé ?)" % Net.DEFAULT_PORT)
+		_show_error(Lang.t("Impossible d'ouvrir le port %d (déjà utilisé ?)") % Net.DEFAULT_PORT)
 		return
 	get_tree().change_scene_to_file("res://scenes/lobby.tscn")
 
@@ -385,22 +400,22 @@ func _on_join_pressed() -> void:
 	_apply_settings()
 	var ip := _extract_ip(_ip_edit.text)
 	if ip.is_empty():
-		_show_error("Adresse IP invalide. Exemple : 192.168.1.10 (ou 127.0.0.1 sur le même PC).")
+		_show_error(Lang.t("Adresse IP invalide. Exemple : 192.168.1.10 (ou 127.0.0.1 sur le même PC)."))
 		return
 	var error := Net.join_game(ip, Net.DEFAULT_PORT, _password_edit.text.strip_edges(),
 		GameConfig.player_name, GameConfig.color_index)
 	if error != OK:
-		_show_error("Connexion impossible vers « %s »." % ip)
+		_show_error(Lang.t("Connexion impossible vers « %s ».") % ip)
 		return
 	_joining = true
 	_error_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.5))
-	_error_label.text = "⏳ Connexion à %s…" % ip
+	_error_label.text = Lang.t("⏳ Connexion à %s…") % ip
 	# Chien de garde : sans réponse de l'hôte, on ne reste pas bloqué en silence.
 	await get_tree().create_timer(8.0).timeout
 	if _joining and is_inside_tree():
 		_joining = false
 		Net.leave()
-		_show_error("Aucune réponse de %s. Vérifie l'IP, le mot de passe, et que l'hôte a bien cliqué Héberger." % ip)
+		_show_error(Lang.t("Aucune réponse de %s. Vérifie l'IP, le mot de passe, et que l'hôte a bien cliqué Héberger.") % ip)
 
 func _on_joined_lobby() -> void:
 	if _joining:
@@ -422,4 +437,6 @@ func _extract_ip(raw: String) -> String:
 	return ""
 
 func _start_game() -> void:
-	get_tree().change_scene_to_file("res://scenes/main.tscn")
+	# Différé : on peut arriver ici pendant que l'arbre construit encore le menu
+	# (autoplay/headless), et changer de scène à cet instant est interdit.
+	get_tree().change_scene_to_file.call_deferred("res://scenes/main.tscn")

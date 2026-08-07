@@ -127,7 +127,7 @@ func poke(clicker) -> void:
 	if clicker == null or not clicker.is_alive():
 		return
 	if not EventBus.match_started:
-		EventBus.log_private.emit(clicker, "🍺 Le barman t'ignore pendant le tutoriel.")
+		EventBus.log_private.emit(clicker, Lang.t("🍺 Le barman t'ignore pendant le tutoriel."))
 		return
 	var key: int = clicker.get_instance_id()
 	var count: int = _pokes.get(key, 0) + 1
@@ -135,21 +135,21 @@ func poke(clicker) -> void:
 	_shake()
 	match count:
 		1:
-			EventBus.log_private.emit(clicker, "🍺 Le barman lève les yeux : « Ne m'énerve pas. »")
+			EventBus.log_private.emit(clicker, Lang.t("🍺 Le barman lève les yeux : « Ne m'énerve pas. »"))
 		2:
-			EventBus.log_private.emit(clicker, "🍺 « J'ai dit : ne. m'énerve. PAS. »")
+			EventBus.log_private.emit(clicker, Lang.t("🍺 « J'ai dit : ne. m'énerve. PAS. »"))
 		3:
-			EventBus.log_private.emit(clicker, "🍺 « ATTENTION. Le prochain coup, je m'énerve. »")
+			EventBus.log_private.emit(clicker, Lang.t("🍺 « ATTENTION. Le prochain coup, je m'énerve. »"))
 		4:
 			EventBus.log_private.emit(clicker,
-				"🍺 « DERNIER AVERTISSEMENT. Encore un clic et je t'emporte, toi et deux autres. »")
+				Lang.t("🍺 « DERNIER AVERTISSEMENT. Encore un clic et je t'emporte, toi et deux autres. »"))
 		_:
 			_rage(clicker)
 			_pokes[key] = 0
 
 ## La coupe est pleine : le provocateur et deux innocents y passent.
 func _rage(clicker) -> void:
-	EventBus.log_public.emit("💥 LE BARMAN EXPLOSE DE RAGE ! Il jette ses verres à travers la salle !")
+	EventBus.log_public.emit(Lang.t("💥 LE BARMAN EXPLOSE DE RAGE ! Il jette ses verres à travers la salle !"))
 	var victims: Array = [clicker]
 	var others := get_tree().get_nodes_in_group("characters").filter(
 		func(c) -> bool: return c != clicker and c.is_alive())
