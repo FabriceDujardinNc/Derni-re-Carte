@@ -87,29 +87,33 @@ metaball_part("Neck", (0, 0, 0.98), [((0, 0, 0.01), 0.065)], SKIN)
 
 # ---- GROSSE TÊTE expressive (origine : z 1.06 = PIVOT du regard). ----
 metaball_part("Head", (0, 0, 1.06), [
-    ((0, -0.01, 0.19), 0.195), ((0, -0.10, 0.17), 0.13),
-    ((0, 0.09, 0.22), 0.135), ((0, 0.085, 0.06), 0.10),
-    ((0, 0.13, 0.02), 0.055),
-    ((-0.10, 0.08, 0.10), 0.08), ((0.10, 0.08, 0.10), 0.08),
+    ((0, -0.01, 0.19), 0.195), ((0, -0.10, 0.17), 0.12),
+    ((0, 0.08, 0.22), 0.13), ((0, 0.10, 0.06), 0.095),
+    ((0, 0.12, 0.02), 0.055),
+    ((-0.075, 0.10, 0.10), 0.085), ((0.075, 0.10, 0.10), 0.085),
 ], SKIN)
 
-# ---- Nez patate, grandes oreilles, tignasse. ----
-metaball_part("Nose", (0, 0, 1.06), [
-    ((0, 0.20, 0.14), 0.038), ((0, 0.215, 0.115), 0.032),
-], SKIN, resolution=0.018)
-metaball_part("EarL", (0, 0, 1.06), [((-0.19, -0.02, 0.16), 0.05)], SKIN, resolution=0.02)
-metaball_part("EarR", (0, 0, 1.06), [((0.19, -0.02, 0.16), 0.05)], SKIN, resolution=0.02)
+# ---- Nez patate bien visible, bouche, grandes oreilles, tignasse. ----
+metaball_part("Nose", (0, 0, 1.06), [((0, 0.20, 0.145), 0.052)], SKIN,
+              resolution=0.018)
+metaball_part("Mouth", (0, 0, 1.06), [
+    ((-0.028, 0.196, 0.062), 0.026), ((0, 0.205, 0.055), 0.028),
+    ((0.028, 0.196, 0.062), 0.026),
+], PUPIL, resolution=0.015)
+metaball_part("EarL", (0, 0, 1.06), [((-0.172, -0.02, 0.16), 0.05)], SKIN, resolution=0.02)
+metaball_part("EarR", (0, 0, 1.06), [((0.172, -0.02, 0.16), 0.05)], SKIN, resolution=0.02)
 metaball_part("Hair", (0, 0, 1.06), [
-    ((0, -0.04, 0.325), 0.15), ((0, 0.09, 0.30), 0.115),
-    ((-0.11, -0.02, 0.29), 0.10), ((0.11, -0.02, 0.29), 0.10),
-    ((0, -0.14, 0.235), 0.10), ((0.06, 0.16, 0.27), 0.05),
+    ((0, -0.04, 0.34), 0.16), ((0, 0.10, 0.315), 0.125),
+    ((-0.12, -0.02, 0.30), 0.11), ((0.12, -0.02, 0.30), 0.11),
+    ((0, -0.15, 0.25), 0.11), ((0.06, 0.17, 0.28), 0.055),
+    ((-0.05, 0.15, 0.30), 0.06),
 ], HAIR)
 
-# ---- GRANDS yeux cartoon (la fenêtre du bluff). ----
+# ---- GRANDS yeux cartoon (la fenêtre du bluff), rapprochés et à mi-face. ----
 for side in (-1, 1):
     tag = "L" if side < 0 else "R"
-    sphere_part(f"EyeWhite{tag}", (0.082 * side, 0.155, 1.29), (0.052, 0.038, 0.06), EYE)
-    sphere_part(f"Pupil{tag}", (0.082 * side, 0.188, 1.29), (0.024, 0.014, 0.028), PUPIL)
+    sphere_part(f"EyeWhite{tag}", (0.066 * side, 0.16, 1.275), (0.05, 0.036, 0.058), EYE)
+    sphere_part(f"Pupil{tag}", (0.066 * side, 0.192, 1.275), (0.024, 0.014, 0.028), PUPIL)
 
 # ---- BRAS courts et ronds (origine : ÉPAULE), MAINS à pouce. ----
 for side in (-1, 1):

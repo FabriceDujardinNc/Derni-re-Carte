@@ -178,21 +178,18 @@ func _ready() -> void:
 
 ## Debug : capture l'écran après un délai puis ferme le jeu (tests visuels).
 func _schedule_screenshot(delay: float) -> void:
-	# Un bot marche jusqu'à un point DEVANT le joueur local (regard caméra) :
-	# on vérifie l'avatar en mouvement, debout, de près.
-	await get_tree().create_timer(maxf(delay - 5.0, 0.5)).timeout
-	var walkers := get_tree().get_nodes_in_group("characters")
-	if walkers.size() > 1 and local_player != null:
-		walkers[1].spy_walk(local_player)
-	await get_tree().create_timer(minf(delay, 5.0)).timeout
-	# Caméra libre : vue extérieure du marcheur, en entier.
-	if walkers.size() > 1:
+	await get_tree().create_timer(delay).timeout
+	# Caméra de PROFIL sur un bot assis : vérifie l'orientation exacte des
+	# bras (vers la table) et des jambes pliées (vers l'avant).
+	var models := get_tree().get_nodes_in_group("characters")
+	if models.size() > 1:
 		var debug_camera := Camera3D.new()
 		add_child(debug_camera)
-		var walker_position: Vector3 = walkers[1].global_position
-		debug_camera.global_position = walker_position \
-			+ (walker_position - Vector3.ZERO).normalized() * 2.5 + Vector3(0, 1.6, 0)
-		debug_camera.look_at(walker_position + Vector3(0, 1.0, 0))
+		var subject: Node3D = models[1]
+		var side_direction: Vector3 = subject.global_basis.x
+		debug_camera.global_position = subject.global_position \
+			+ side_direction * 2.6 + Vector3(0, 1.4, 0)
+		debug_camera.look_at(subject.global_position + Vector3(0, 1.0, 0))
 		debug_camera.current = true
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png("user://shot.png")

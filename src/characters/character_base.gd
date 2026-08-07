@@ -244,7 +244,8 @@ func _build_visuals() -> void:
 ## épaules animables (cartes, gifles, lancers), marqueurs de mains (fleur).
 func _setup_avatar() -> void:
 	var avatar: Node3D = AVATAR_SCENE.instantiate()
-	avatar.rotation.y = PI  # le glTF sort face à +Z ; le jeu regarde -Z.
+	# Vérifié sur le glTF exporté : le visage sort déjà face à -Z (l'avant en
+	# Godot). AUCUNE rotation — en ajouter une met la tête à l'envers.
 	add_child(avatar)
 
 	# Matériau UNIQUE de peau : couleur du joueur, dégradation, flashs de dégâts.
@@ -254,7 +255,7 @@ func _setup_avatar() -> void:
 	_mat.roughness = 0.9
 	for mesh in avatar.find_children("*", "MeshInstance3D", true, false):
 		if not (mesh.name.begins_with("Eye") or mesh.name.begins_with("Pupil") \
-				or mesh.name.begins_with("Hair")):
+				or mesh.name.begins_with("Hair") or mesh.name.begins_with("Mouth")):
 			mesh.material_override = _mat
 
 	_body = avatar.find_child("Body", true, false) as MeshInstance3D
@@ -268,7 +269,7 @@ func _setup_avatar() -> void:
 	_head_pivot = Node3D.new()
 	_head_pivot.position = Vector3(0, head_part.global_position.y, 0)
 	add_child(_head_pivot)
-	for part_name in ["Head", "Nose", "Muzzle", "NoseTip", "EarL", "EarR", "Hair",
+	for part_name in ["Head", "Nose", "Mouth", "EarL", "EarR", "Hair",
 			"EyeWhiteL", "EyeWhiteR", "PupilL", "PupilR"]:
 		var part: Node3D = avatar.find_child(part_name, true, false)
 		if part != null:
@@ -335,12 +336,12 @@ func _build_accessories() -> void:
 	brow_mat.albedo_color = Color(0.08, 0.08, 0.1)
 	for side in [-1.0, 1.0]:
 		var brow := BoxMesh.new()
-		brow.size = Vector3(0.11, 0.03, 0.025)
+		brow.size = Vector3(0.095, 0.022, 0.02)
 		# Posés juste au-dessus des grands yeux du modèle (repère : pivot de tête).
 		var mesh := MeshInstance3D.new()
 		mesh.mesh = brow
 		mesh.material_override = brow_mat
-		mesh.position = Vector3(0.103 * side, 0.375, -0.213)
+		mesh.position = Vector3(0.083 * side, 0.34, -0.22)
 		mesh.rotation_degrees = Vector3(0, 0, 8.0 * side)
 		_head_pivot.add_child(mesh)
 
@@ -840,7 +841,7 @@ func store_seat() -> void:
 ## modèle — le plateau les cache, l'œil complète). Debout : jambes droites.
 func _apply_seat_pose() -> void:
 	for leg in _legs:
-		leg.rotation_degrees.x = -80.0 if is_seated else 0.0
+		leg.rotation_degrees.x = 80.0 if is_seated else 0.0
 	for foot in _feet:
 		foot.visible = not is_seated
 
