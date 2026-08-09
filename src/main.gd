@@ -176,33 +176,37 @@ func _ready() -> void:
 		await get_tree().create_timer(0.8).timeout
 		turn_manager.start_match(characters)
 
-## Debug : capture l'écran après un délai puis ferme le jeu (tests visuels).
+## Debug : photographie un bot assis sous trois angles (face, profil, large)
+## puis ferme le jeu. Sert à contrôler l'avatar sans lancer le jeu à la main.
 func _schedule_screenshot(delay: float) -> void:
 	await get_tree().create_timer(delay).timeout
-	# Caméra de PROFIL sur un bot assis : vérifie l'orientation exacte des
-	# bras (vers la table) et des jambes pliées (vers l'avant).
 	var models := get_tree().get_nodes_in_group("characters")
-	if models.size() > 1:
-		var debug_camera := Camera3D.new()
-		add_child(debug_camera)
-		var subject: Node3D = models[1]
-		var side_direction: Vector3 = subject.global_basis.x
-		debug_camera.global_position = subject.global_position \
-			+ side_direction * 2.6 + Vector3(0, 1.4, 0)
-		debug_camera.look_at(subject.global_position + Vector3(0, 1.0, 0))
-		debug_camera.current = true
-	await RenderingServer.frame_post_draw
-	get_viewport().get_texture().get_image().save_png("user://shot.png")
-	print("SCREENSHOT_OK ", ProjectSettings.globalize_path("user://shot.png"))
-	for character in get_tree().get_nodes_in_group("characters"):
-		print("== ", character.display_name, " root=", character.global_position,
-			" seated=", character.is_seated)
-		for child in character.get_children():
-			if child is Node3D:
-				print("   ", child.name, " g=", (child as Node3D).global_position)
-				for sub in child.get_children():
-					if sub is Node3D:
-						print("      ", sub.name, " g=", (sub as Node3D).global_position)
+	if models.size() < 2:
+		get_tree().quit()
+		return
+	var subject: Node3D = models[1]
+	var eyes: Vector3 = subject.global_position + Vector3(0, 1.35, 0)
+	var front: Vector3 = -subject.global_basis.z  # le modèle regarde -Z.
+	var side: Vector3 = subject.global_basis.x
+	var debug_camera := Camera3D.new()
+	add_child(debug_camera)
+	debug_camera.current = true
+	# Face : le visage doit nous regarder. Profil : bras vers la table et
+	# jambes pliées vers l'avant. Large : la silhouette dans le décor.
+	var shots := {
+		"face": [eyes + front * 1.5, eyes],
+		"profil": [eyes + side * 2.2 + Vector3(0, 0.2, 0), eyes - Vector3(0, 0.4, 0)],
+		"large": [subject.global_position + front * 3.4 + side * 2.2 + Vector3(0, 2.0, 0),
+			subject.global_position + Vector3(0, 0.9, 0)],
+	}
+	for name in shots:
+		var shot: Array = shots[name]
+		debug_camera.global_position = shot[0]
+		debug_camera.look_at(shot[1])
+		await RenderingServer.frame_post_draw
+		var path: String = "user://shot_%s.png" % name
+		get_viewport().get_texture().get_image().save_png(path)
+		print("SCREENSHOT_OK ", ProjectSettings.globalize_path(path))
 	get_tree().quit()
 
 func _unhandled_input(event: InputEvent) -> void:

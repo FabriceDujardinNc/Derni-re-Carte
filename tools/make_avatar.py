@@ -86,22 +86,26 @@ metaball_part("Body", (0, 0, 0.62), [
 metaball_part("Neck", (0, 0, 0.98), [((0, 0, 0.01), 0.065)], SKIN)
 
 # ---- GROSSE TÊTE expressive (origine : z 1.06 = PIVOT du regard). ----
+# Crâne rond et joues pleines, SANS museau : les boules du bas de la face
+# restent en retrait (y ≤ 0.05), sinon la tête s'étire en groin de profil.
 metaball_part("Head", (0, 0, 1.06), [
-    ((0, -0.01, 0.19), 0.195), ((0, -0.10, 0.17), 0.12),
-    ((0, 0.08, 0.22), 0.13), ((0, 0.10, 0.06), 0.095),
-    ((0, 0.12, 0.02), 0.055),
-    ((-0.075, 0.10, 0.10), 0.085), ((0.075, 0.10, 0.10), 0.085),
+    ((0, -0.01, 0.19), 0.20), ((0, -0.11, 0.17), 0.125),
+    ((0, 0.05, 0.21), 0.135), ((0, 0.04, 0.09), 0.115),
+    ((-0.085, 0.03, 0.13), 0.10), ((0.085, 0.03, 0.13), 0.10),
 ], SKIN)
 
 # ---- Nez patate bien visible, bouche, grandes oreilles, tignasse. ----
-metaball_part("Nose", (0, 0, 1.06), [((0, 0.20, 0.145), 0.052)], SKIN,
-              resolution=0.018)
+# Petit nez rond posé SUR la face (une seule boule : pas de museau).
+metaball_part("Nose", (0, 0, 1.06), [((0, 0.175, 0.15), 0.045)], SKIN,
+              resolution=0.016)
+# Sourire léger, plaqué juste sous le nez.
 metaball_part("Mouth", (0, 0, 1.06), [
-    ((-0.028, 0.196, 0.062), 0.026), ((0, 0.205, 0.055), 0.028),
-    ((0.028, 0.196, 0.062), 0.026),
-], PUPIL, resolution=0.015)
-metaball_part("EarL", (0, 0, 1.06), [((-0.172, -0.02, 0.16), 0.05)], SKIN, resolution=0.02)
-metaball_part("EarR", (0, 0, 1.06), [((0.172, -0.02, 0.16), 0.05)], SKIN, resolution=0.02)
+    ((-0.032, 0.155, 0.085), 0.022), ((0, 0.166, 0.077), 0.024),
+    ((0.032, 0.155, 0.085), 0.022),
+], PUPIL, resolution=0.014)
+# Oreilles : sur les CÔTÉS du crâne, à hauteur des yeux, bien en arrière.
+metaball_part("EarL", (0, 0, 1.06), [((-0.185, -0.045, 0.20), 0.055)], SKIN, resolution=0.02)
+metaball_part("EarR", (0, 0, 1.06), [((0.185, -0.045, 0.20), 0.055)], SKIN, resolution=0.02)
 metaball_part("Hair", (0, 0, 1.06), [
     ((0, -0.04, 0.34), 0.16), ((0, 0.10, 0.315), 0.125),
     ((-0.12, -0.02, 0.30), 0.11), ((0.12, -0.02, 0.30), 0.11),
@@ -109,11 +113,12 @@ metaball_part("Hair", (0, 0, 1.06), [
     ((-0.05, 0.15, 0.30), 0.06),
 ], HAIR)
 
-# ---- GRANDS yeux cartoon (la fenêtre du bluff), rapprochés et à mi-face. ----
+# ---- GRANDS yeux cartoon (la fenêtre du bluff) : ENFONCÉS dans la face,
+# ---- sinon ils font deux billes collées sur les joues vues de profil. ----
 for side in (-1, 1):
     tag = "L" if side < 0 else "R"
-    sphere_part(f"EyeWhite{tag}", (0.066 * side, 0.16, 1.275), (0.05, 0.036, 0.058), EYE)
-    sphere_part(f"Pupil{tag}", (0.066 * side, 0.192, 1.275), (0.024, 0.014, 0.028), PUPIL)
+    sphere_part(f"EyeWhite{tag}", (0.072 * side, 0.125, 1.285), (0.052, 0.032, 0.056), EYE)
+    sphere_part(f"Pupil{tag}", (0.072 * side, 0.152, 1.285), (0.026, 0.014, 0.03), PUPIL)
 
 # ---- BRAS courts et ronds (origine : ÉPAULE), MAINS à pouce. ----
 for side in (-1, 1):

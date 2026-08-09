@@ -341,7 +341,8 @@ func _build_accessories() -> void:
 		var mesh := MeshInstance3D.new()
 		mesh.mesh = brow
 		mesh.material_override = brow_mat
-		mesh.position = Vector3(0.083 * side, 0.34, -0.22)
+		# Repères pris sur le modèle : yeux à y+0.28, z-0.16 du pivot de tête.
+		mesh.position = Vector3(0.09 * side, 0.335, -0.20)
 		mesh.rotation_degrees = Vector3(0, 0, 8.0 * side)
 		_head_pivot.add_child(mesh)
 
@@ -837,13 +838,16 @@ func store_seat() -> void:
 	seat_position = position
 	seat_rotation = rotation.y
 
-## Assis : cuisses pliées vers la table, pieds escamotés (pas de genoux au
-## modèle — le plateau les cache, l'œil complète). Debout : jambes droites.
+## Le modèle n'a PAS de genou : faire pivoter la cuisse entière couchait les
+## jambes à l'horizontale (personnage avachi hors de sa chaise). Torse, cuisses
+## et pieds étant des pièces SÉPARÉES, plier ou descendre l'un disloque
+## l'ensemble. Assis, les jambes restent donc droites sous la table — comme
+## dans tous les jeux de ce style, et rien ne dépasse.
 func _apply_seat_pose() -> void:
 	for leg in _legs:
-		leg.rotation_degrees.x = 80.0 if is_seated else 0.0
+		leg.rotation_degrees.x = 0.0
 	for foot in _feet:
-		foot.visible = not is_seated
+		foot.visible = true
 
 ## Quitter sa chaise : action PUBLIQUE — tout le monde sait qu'un espion rôde.
 func stand_up() -> void:
