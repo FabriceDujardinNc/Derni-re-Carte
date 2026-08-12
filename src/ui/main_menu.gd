@@ -223,7 +223,13 @@ func _build_ui() -> void:
 	form.add_child(HSeparator.new())
 
 	# --- Multijoueur ---
-	var multi_title := _section_label(Lang.t("🌐  Multijoueur — héberge, ou rejoins avec IP + mot de passe"))
+	# Dans un NAVIGATEUR, la page a été servie par l'hôte : son adresse et le
+	# mot de passe viennent de l'URL, et héberger est impossible (un onglet
+	# n'ouvre pas de port). L'invité n'a donc qu'un bouton à cliquer.
+	var web := _web_context()
+	var on_web := not web.is_empty()
+	var multi_title := _section_label(Lang.t("🌐  Rejoindre la partie de l'hôte") if on_web \
+		else Lang.t("🌐  Multijoueur — héberge, ou rejoins avec IP + mot de passe"))
 	form.add_child(multi_title)
 
 	_password_edit = LineEdit.new()
@@ -236,21 +242,29 @@ func _build_ui() -> void:
 	_ip_edit.custom_minimum_size = Vector2(0, 38)
 	form.add_child(_ip_edit)
 
+	if on_web:
+		_ip_edit.text = str(web["host"])
+		_password_edit.text = str(web["password"])
+		# Déjà renseignés par le lien : on les cache pour ne pas égarer l'invité.
+		_ip_edit.visible = false
+		_password_edit.visible = false
+
 	var multi_row := HBoxContainer.new()
 	multi_row.add_theme_constant_override("separation", 12)
 	form.add_child(multi_row)
-	var host_button := Button.new()
-	host_button.text = Lang.t("🏠  Héberger")
-	host_button.custom_minimum_size = Vector2(0, 46)
-	host_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(host_button, UiKit.ACCENT_BLUE, 20)
-	host_button.pressed.connect(_on_host_pressed)
-	multi_row.add_child(host_button)
+	if not on_web:
+		var host_button := Button.new()
+		host_button.text = Lang.t("🏠  Héberger")
+		host_button.custom_minimum_size = Vector2(0, 46)
+		host_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		UiKit.style_button(host_button, UiKit.ACCENT_BLUE, 20)
+		host_button.pressed.connect(_on_host_pressed)
+		multi_row.add_child(host_button)
 	var join_button := Button.new()
-	join_button.text = Lang.t("🔗  Rejoindre")
-	join_button.custom_minimum_size = Vector2(0, 46)
+	join_button.text = Lang.t("🔗  REJOINDRE LA PARTIE") if on_web else Lang.t("🔗  Rejoindre")
+	join_button.custom_minimum_size = Vector2(0, 54 if on_web else 46)
 	join_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiKit.style_button(join_button, UiKit.ACCENT_BLUE, 20)
+	UiKit.style_button(join_button, UiKit.ACCENT if on_web else UiKit.ACCENT_BLUE, 24 if on_web else 20)
 	join_button.pressed.connect(_on_join_pressed)
 	multi_row.add_child(join_button)
 
@@ -425,6 +439,19 @@ func _on_joined_lobby() -> void:
 func _on_net_join_failed(reason: String) -> void:
 	_joining = false
 	_show_error(reason)
+
+## Contexte navigateur : l'hôte a servi la page, donc son adresse est celle du
+## site et le mot de passe voyage dans l'URL (?mdp=…). Renvoie {} hors du web.
+func _web_context() -> Dictionary:
+	if not OS.has_feature("web"):
+		return {}
+	var host_name: String = str(JavaScriptBridge.eval("location.hostname", true))
+	var query: String = str(JavaScriptBridge.eval("location.search", true))
+	var pwd := ""
+	for pair in query.trim_prefix("?").split("&"):
+		if pair.begins_with("mdp="):
+			pwd = pair.trim_prefix("mdp=").uri_decode()
+	return {"host": host_name, "password": pwd}
 
 ## Repêche une IP valide même si l'utilisateur colle du texte autour
 ## (« IP : 192.168.1.10 » → « 192.168.1.10 »).

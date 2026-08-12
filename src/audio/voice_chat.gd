@@ -29,6 +29,11 @@ func _ready() -> void:
 		var event := InputEventKey.new()
 		event.physical_keycode = KEY_V
 		InputMap.action_add_event("voice_talk", event)
+	# Navigateur : Godot n'expose pas le micro en export web. On n'installe
+	# donc pas la capture (le joueur ENTEND les autres et garde le chat texte).
+	if OS.has_feature("web"):
+		print("Voice : micro indisponible dans le navigateur — écoute seule.")
+		return
 	_setup_microphone()
 
 ## Bus de capture muet : le micro n'est JAMAIS rejoué localement (anti-larsen).
@@ -49,6 +54,8 @@ func _setup_microphone() -> void:
 ## la capture produit du silence : aucun risque, aucune erreur.
 func set_microphone_enabled(enabled: bool) -> void:
 	GameConfig.voice_enabled = enabled
+	if _mic_player == null:
+		return  # pas de capture (navigateur) : rien à activer.
 	if enabled and not _mic_player.playing:
 		_mic_player.play()
 	elif not enabled and _mic_player.playing:

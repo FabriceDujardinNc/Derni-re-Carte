@@ -11,7 +11,7 @@ const PLAYER_COLORS: Array[Color] = [
 
 ## Version affichée au menu ET vérifiée à la connexion réseau : deux versions
 ## différentes ne peuvent pas jouer ensemble (protocole incompatible).
-const VERSION := "v0.11-alpha"
+const VERSION := "v0.12-alpha"
 
 ## Catalogue des chapeaux. Les 4 premiers sont gratuits ; les autres
 ## s'achètent avec l'audace GAGNÉE EN JOUANT (jamais d'argent réel).

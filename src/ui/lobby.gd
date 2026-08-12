@@ -69,6 +69,25 @@ func _build_ui() -> void:
 		_info_label.text = Lang.t("Connecté ! En attente du lancement par l'hôte…")
 	box.add_child(_info_label)
 
+	# Invités SANS le jeu : un lien à ouvrir dans leur navigateur, rien à
+	# télécharger. Affiché seulement si le partage web a démarré.
+	var share_url := Net.web_share_url() if Net.is_server else ""
+	if not share_url.is_empty():
+		var share_label := Label.new()
+		share_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		share_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		share_label.add_theme_color_override("font_color", Color(0.6, 0.95, 0.7))
+		share_label.text = Lang.t("🌐 Sans rien installer — ce lien dans leur navigateur :\n%s") % share_url
+		box.add_child(share_label)
+		var copy := Button.new()
+		copy.text = Lang.t("📋  Copier le lien")
+		copy.custom_minimum_size = Vector2(0, 38)
+		UiKit.style_button(copy, UiKit.ACCENT_BLUE, 16)
+		copy.pressed.connect(func() -> void:
+			DisplayServer.clipboard_set(share_url)
+			copy.text = Lang.t("✅  Lien copié !"))
+		box.add_child(copy)
+
 	box.add_child(HSeparator.new())
 
 	var players_title := Label.new()

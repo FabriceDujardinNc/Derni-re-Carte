@@ -10,6 +10,12 @@ extends Node
 ##
 ## Protection par mot de passe à la connexion (suffisant entre amis ; le
 ## matchmaking Steam remplacera l'IP plus tard sans toucher à ce modèle).
+##
+## TRANSPORT : WebSocket, et non plus ENet/UDP. Raison : un NAVIGATEUR ne peut
+## pas ouvrir de socket UDP. Avec WebSocket, un invité joue depuis Chrome sans
+## RIEN télécharger (l'hôte lui sert la page — voir web_host.gd), et le même
+## code sert aux versions installées. L'API multijoueur de Godot (@rpc) est
+## identique : seules la création du serveur et du client changent.
 
 const DEFAULT_PORT := 4242
 const TRANSFORM_RATE := 1.0 / 15.0  # 15 envois de positions par seconde.
@@ -29,6 +35,10 @@ var characters: Array = []  ## CharacterBase par siège (rempli par main.gd).
 var _transform_accumulator := 0.0
 var _clients_ready := 0
 
+## Serveur HTTP qui sert la version navigateur aux invités (hôte uniquement).
+const WEB_HOST_SCRIPT := preload("res://src/networking/web_host.gd")
+var web_host: Node
+
 func client_mode() -> bool:
 	return active and not is_server
 
@@ -41,8 +51,8 @@ func _char(seat: int):
 # ---------------------------------------------------------------- Hébergement
 
 func host_game(port: int, pwd: String, player_name: String, color: int) -> Error:
-	var peer := ENetMultiplayerPeer.new()
-	var error := peer.create_server(port, 8)
+	var peer := WebSocketMultiplayerPeer.new()
+	var error := peer.create_server(port)
 	if error != OK:
 		return error
 	multiplayer.multiplayer_peer = peer
@@ -51,13 +61,19 @@ func host_game(port: int, pwd: String, player_name: String, color: int) -> Error
 	password = pwd
 	peers = {1: {"name": player_name, "color": color, "hat": GameConfig.selected_hat}}
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	# Partage sans téléchargement : les invités ouvrent le lien dans un
+	# navigateur. Silencieux si la version navigateur n'est pas distribuée.
+	if web_host == null and not OS.has_feature("web"):
+		web_host = WEB_HOST_SCRIPT.new()
+		add_child(web_host)
+		web_host.start()
 	lobby_updated.emit()
 	return OK
 
 func join_game(ip: String, port: int, pwd: String, player_name: String, color: int) -> Error:
 	print("Net : connexion à %s:%d…" % [ip, port])
-	var peer := ENetMultiplayerPeer.new()
-	var error := peer.create_client(ip, port)
+	var peer := WebSocketMultiplayerPeer.new()
+	var error := peer.create_client("ws://%s:%d" % [ip, port])
 	if error != OK:
 		print("Net : échec de création du client (%d)" % error)
 		return error
@@ -109,7 +125,17 @@ func _on_peer_disconnected(peer_id: int) -> void:
 				EventBus.log_public.emit(Lang.t("🤖 %s a quitté la partie — un bot prend le relais.")
 					% character.display_name)
 
+## Lien à donner aux invités navigateur (vide si le partage n'est pas actif).
+func web_share_url() -> String:
+	if web_host != null and web_host.is_sharing():
+		return web_host.share_url(password)
+	return ""
+
 func leave() -> void:
+	if web_host != null:
+		web_host.stop()
+		web_host.queue_free()
+		web_host = null
 	active = false
 	is_server = true
 	peers = {}
