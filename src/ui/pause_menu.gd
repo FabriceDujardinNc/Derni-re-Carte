@@ -24,13 +24,29 @@ func _build_ui() -> void:
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(dim)
 
+	# Défilable et largeur bornée : ces options doivent rester atteignables
+	# dans une petite fenêtre ou un onglet de navigateur.
+	var scroll := ScrollContainer.new()
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_root.add_child(scroll)
+
+	var margins := MarginContainer.new()
+	margins.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for side in ["margin_left", "margin_right"]:
+		margins.add_theme_constant_override(side, 16)
+	margins.add_theme_constant_override("margin_top", 20)
+	margins.add_theme_constant_override("margin_bottom", 20)
+	scroll.add_child(margins)
+
 	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_root.add_child(center)
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margins.add_child(center)
 
 	_panel = PanelContainer.new()
 	_panel.add_theme_stylebox_override("panel", UiKit.panel_style())
-	_panel.custom_minimum_size = Vector2(420, 0)
+	var available: float = _root.get_viewport_rect().size.x - 48.0
+	_panel.custom_minimum_size = Vector2(clampf(available, 260.0, 420.0), 0)
 	center.add_child(_panel)
 
 	var box := VBoxContainer.new()

@@ -1,0 +1,57 @@
+DERNIÈRE CARTE — comment jouer entre amis
+=========================================
+
+CELUI QUI HÉBERGE (une seule personne)
+--------------------------------------
+1. Dézippe TOUT ce dossier au même endroit : l'exécutable ET le dossier
+   « web » doivent rester côte à côte.
+2. Lance le jeu, saisis un mot de passe si tu veux, puis clique « Héberger ».
+3. Au premier hébergement, Windows demande d'autoriser le réseau : clique
+   « Oui ». Le salon affiche alors « ✅ Réseau autorisé ».
+4. La salle d'attente affiche un lien du genre :
+
+       http://192.168.1.20:8080
+
+   Clique « Copier le lien » et envoie-le à tes amis (Teams, WhatsApp, SMS…).
+5. Quand tout le monde est là, clique « LANCER ».
+
+⚠️ TES AMIS VOIENT « CE SITE EST INACCESSIBLE » ?
+   C'est le pare-feu Windows. Fais un CLIC DROIT sur
+   « autoriser-pare-feu.bat » → « Exécuter en tant qu'administrateur ».
+   Une seule fois, et c'est réglé pour de bon.
+
+   Pour vérifier que le jeu tourne bien de ton côté : ouvre
+   http://127.0.0.1:8080 dans TON navigateur pendant que tu héberges.
+   Astuce : pour tester sans déranger personne, ouvre le lien sur ton
+   TÉLÉPHONE (connecté au même wifi) — c'est exactement la situation
+   d'un invité.
+   Si la page se charge chez toi mais pas chez eux, c'est bien le
+   pare-feu (ou ton réseau est classé « Public » : mets-le en « Privé »
+   dans Paramètres > Réseau > ton wifi > Type de profil réseau).
+
+TES AMIS — DEUX POSSIBILITÉS
+----------------------------
+• SANS RIEN INSTALLER (le plus simple) : ils ouvrent le lien dans Chrome,
+  Edge ou Firefox, choisissent leur nom et cliquent « REJOINDRE LA PARTIE ».
+  C'est tout. Ils n'ont rien à télécharger.
+  À savoir : dans le navigateur, le micro n'est pas disponible (limite du
+  navigateur) — ils entendent tout le monde et écrivent avec le chat (T).
+  Astuce : ajoute « &auto=1 » à la fin du lien et ils entrent sans même
+  cliquer (ou « ?auto=1 » s'il n'y a pas de mot de passe).
+
+• AVEC LE JEU INSTALLÉ : ils dézippent l'archive, lancent le jeu, saisissent
+  l'IP de l'hôte et le mot de passe, puis « Rejoindre ». Micro compris.
+
+IMPORTANT
+---------
+• Tout le monde doit être sur le MÊME réseau (même wifi / même bureau).
+• Tout le monde doit avoir la MÊME version du jeu (affichée en bas à droite).
+• Pour jouer seul contre des bots : « JOUER EN SOLO », aucun réseau requis.
+
+COMMANDES
+---------
+ESPACE piocher · R révéler sa carte · clic droit utiliser une carte
+E se lever · ZQSD marcher · V parler (micro) · T chat · 1-4 émotes
+Échap options
+
+Bon bluff !

@@ -195,8 +195,11 @@ func _build_ui() -> void:
 	_panel.anchor_right = 0.5
 	_panel.anchor_top = 1.0
 	_panel.anchor_bottom = 1.0
-	_panel.offset_left = -300
-	_panel.offset_right = 300
+	# Demi-largeur bornée : 300 px sur un écran normal, resserrée sur un
+	# téléphone plutôt que de sortir de l'écran.
+	var half: float = clampf(_root.get_viewport_rect().size.x * 0.5 - 16.0, 150.0, 300.0)
+	_panel.offset_left = -half
+	_panel.offset_right = half
 	_panel.offset_top = -250
 	_panel.offset_bottom = -80
 	_root.add_child(_panel)
@@ -214,7 +217,9 @@ func _build_ui() -> void:
 	# La barre de crochetage : piste sombre, zone verte, curseur clair.
 	_track = ColorRect.new()
 	_track.color = Color(0.08, 0.07, 0.1)
-	_track.custom_minimum_size = Vector2(520, 26)
+	# La piste suit la largeur du panneau (toute la logique est relative à
+	# _track.size.x, donc une piste plus courte reste jouable).
+	_track.custom_minimum_size = Vector2(maxf(half * 2.0 - 60.0, 180.0), 26)
 	box.add_child(_track)
 	_zone = ColorRect.new()
 	_zone.color = Color(0.3, 0.8, 0.4, 0.85)

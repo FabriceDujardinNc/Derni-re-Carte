@@ -20,6 +20,7 @@ var _balance_label: Label
 var _title: Label
 var _panel: PanelContainer
 var _joining := false
+var _scroll: ScrollContainer
 
 func _ready() -> void:
 	Net.leave()  # retour au menu = on coupe toute session réseau en cours.
@@ -47,6 +48,12 @@ func _ready() -> void:
 		return
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_selected_color = GameConfig.color_index
+	# Debug de mise en page : `-- menushot=2` photographie le menu en haut PUIS
+	# défilé en bas, puis quitte. Sert à vérifier qu'aucun bouton ne devient
+	# inatteignable selon la taille de la fenêtre.
+	for arg in args:
+		if arg.begins_with("menushot="):
+			_capture_layout(arg.get_slice("=", 1).to_float())
 	_build_ui()
 	_animate_entrance()
 	Audio.play_menu_music()
@@ -66,19 +73,45 @@ func _build_ui() -> void:
 	add_child(card_layer)
 	UiKit.spawn_floating_cards(card_layer, 10)
 
+	# Le menu est PLUS HAUT que bien des écrans (fenêtre réduite, onglet de
+	# navigateur, téléphone) : sans défilement, les boutons multijoueur du bas
+	# devenaient inatteignables. Tout le formulaire vit donc dans une zone
+	# défilante (molette au clavier-souris, glissement du doigt sur mobile).
+	var scroll := ScrollContainer.new()
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true  # tabulation/champ actif toujours amené à l'écran.
+	add_child(scroll)
+	_scroll = scroll
+
+	# En dessous de cette largeur (téléphone en portrait, fenêtre étroite), on
+	# resserre tout : titre plus petit, bouton drapeau réduit, rangées de
+	# boutons qui passent à la ligne.
+	var narrow: bool = get_viewport_rect().size.x < 560.0
+
+	# Marges pour que le titre ne colle ni au haut ni aux bords sur petit écran.
+	# Sur écran étroit, on descend le contenu : le drapeau occupe le coin.
+	var margins := MarginContainer.new()
+	margins.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for side in ["margin_left", "margin_right"]:
+		margins.add_theme_constant_override(side, 16)
+	margins.add_theme_constant_override("margin_top", 68 if narrow else 20)
+	margins.add_theme_constant_override("margin_bottom", 24)
+	scroll.add_child(margins)
+
 	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margins.add_child(center)
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 18)
 	center.add_child(column)
 
-	# --- Titre ---
+	# --- Titre --- (rétréci sur écran étroit, sinon il sort du cadre)
 	_title = Label.new()
 	_title.text = Lang.t("🎴 Dernière Carte")
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title.add_theme_font_size_override("font_size", 54)
+	_title.add_theme_font_size_override("font_size", 32 if narrow else 54)
 	_title.add_theme_color_override("font_color", Color(0.95, 0.88, 0.72))
 	_title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
 	_title.add_theme_constant_override("shadow_offset_x", 3)
@@ -94,7 +127,10 @@ func _build_ui() -> void:
 	# --- Panneau central ---
 	_panel = PanelContainer.new()
 	_panel.add_theme_stylebox_override("panel", UiKit.panel_style())
-	_panel.custom_minimum_size = Vector2(520, 0)
+	# Largeur adaptée à la fenêtre : 520 px sur un écran normal, mais on se
+	# resserre plutôt que de déborder sur un téléphone en portrait.
+	var available: float = get_viewport_rect().size.x - 48.0
+	_panel.custom_minimum_size = Vector2(clampf(available, 280.0, 520.0), 0)
 	column.add_child(_panel)
 
 	var form := VBoxContainer.new()
@@ -122,20 +158,26 @@ func _build_ui() -> void:
 	form.add_child(_count_slider)
 
 	form.add_child(_section_label(Lang.t("🎨  Ta couleur")))
-	var color_row := HBoxContainer.new()
-	color_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	color_row.add_theme_constant_override("separation", 6)
+	var color_row := HFlowContainer.new()
+	color_row.alignment = FlowContainer.ALIGNMENT_CENTER
+	color_row.add_theme_constant_override("h_separation", 6)
+	color_row.add_theme_constant_override("v_separation", 6)
 	form.add_child(color_row)
 	for i in GameConfig.PLAYER_COLORS.size():
+		# Pastille DESSINÉE, et non le caractère « ⬤ » : ce glyphe est absent
+		# des polices embarquées, et le navigateur — qui n'a aucune police
+		# système de secours — n'affichait que des carrés vides.
 		var button := Button.new()
-		button.text = "⬤"
-		button.flat = true
-		button.custom_minimum_size = Vector2(46, 46)
-		button.add_theme_font_size_override("font_size", 30)
-		button.add_theme_color_override("font_color", GameConfig.PLAYER_COLORS[i])
-		button.add_theme_color_override("font_hover_color", GameConfig.PLAYER_COLORS[i].lightened(0.35))
-		button.add_theme_color_override("font_pressed_color", GameConfig.PLAYER_COLORS[i])
+		button.custom_minimum_size = Vector2(42, 42)
 		button.pressed.connect(_on_color_selected.bind(i))
+		for state in ["normal", "hover", "pressed", "focus"]:
+			var dot := StyleBoxFlat.new()
+			dot.bg_color = GameConfig.PLAYER_COLORS[i]
+			if state == "hover":
+				dot.bg_color = dot.bg_color.lightened(0.25)
+			dot.set_corner_radius_all(21)
+			dot.border_color = Color(1, 1, 1, 0.9)
+			button.add_theme_stylebox_override(state, dot)
 		UiKit.hover_pop(button)
 		color_row.add_child(button)
 		_color_buttons.append(button)
@@ -143,8 +185,9 @@ func _build_ui() -> void:
 
 	# --- Mode de jeu ---
 	form.add_child(_section_label(Lang.t("⚔️  Mode de jeu")))
-	var mode_row := HBoxContainer.new()
-	mode_row.add_theme_constant_override("separation", 10)
+	var mode_row := HFlowContainer.new()
+	mode_row.add_theme_constant_override("h_separation", 8)
+	mode_row.add_theme_constant_override("v_separation", 8)
 	form.add_child(mode_row)
 	var mode_definitions := [
 		["ffa", Lang.t("🗡️ Chacun pour soi")],
@@ -155,8 +198,9 @@ func _build_ui() -> void:
 		var mode_button := Button.new()
 		mode_button.text = definition[1]
 		mode_button.custom_minimum_size = Vector2(0, 40)
-		mode_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		UiKit.style_button(mode_button, UiKit.ACCENT_BLUE, 16)
+		mode_button.size_flags_horizontal = Control.SIZE_FILL if narrow \
+			else Control.SIZE_EXPAND_FILL
+		UiKit.style_button(mode_button, UiKit.ACCENT_BLUE, 14 if narrow else 16)
 		mode_button.pressed.connect(_on_mode_selected.bind(definition[0]))
 		mode_row.add_child(mode_button)
 		_mode_buttons[definition[0]] = mode_button
@@ -172,7 +216,7 @@ func _build_ui() -> void:
 	_balance_label = _section_label(Lang.t("🎩  Ton chapeau — réserve : ⭐ %d") % GameConfig.audace_bank)
 	form.add_child(_balance_label)
 	var hat_grid := GridContainer.new()
-	hat_grid.columns = 3
+	hat_grid.columns = 1 if narrow else 3
 	hat_grid.add_theme_constant_override("h_separation", 6)
 	hat_grid.add_theme_constant_override("v_separation", 6)
 	form.add_child(hat_grid)
@@ -188,8 +232,9 @@ func _build_ui() -> void:
 
 	# --- Difficulté des bots ---
 	form.add_child(_section_label(Lang.t("🤖  Difficulté des bots")))
-	var difficulty_row := HBoxContainer.new()
-	difficulty_row.add_theme_constant_override("separation", 6)
+	var difficulty_row := HFlowContainer.new()
+	difficulty_row.add_theme_constant_override("h_separation", 6)
+	difficulty_row.add_theme_constant_override("v_separation", 6)
 	form.add_child(difficulty_row)
 	var difficulty_definitions := [
 		["facile", Lang.t("😴 Facile")],
@@ -202,8 +247,9 @@ func _build_ui() -> void:
 		var difficulty_button := Button.new()
 		difficulty_button.text = definition[1]
 		difficulty_button.custom_minimum_size = Vector2(0, 36)
-		difficulty_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		UiKit.style_button(difficulty_button, UiKit.ACCENT_BLUE, 13)
+		difficulty_button.size_flags_horizontal = Control.SIZE_FILL if narrow \
+			else Control.SIZE_EXPAND_FILL
+		UiKit.style_button(difficulty_button, UiKit.ACCENT_BLUE, 12 if narrow else 13)
 		difficulty_button.pressed.connect(_on_difficulty_selected.bind(definition[0]))
 		difficulty_row.add_child(difficulty_button)
 		_difficulty_buttons[definition[0]] = difficulty_button
@@ -251,8 +297,9 @@ func _build_ui() -> void:
 		if bool(web["auto"]):
 			_on_join_pressed.call_deferred()
 
-	var multi_row := HBoxContainer.new()
-	multi_row.add_theme_constant_override("separation", 12)
+	var multi_row := HFlowContainer.new()
+	multi_row.add_theme_constant_override("h_separation", 10)
+	multi_row.add_theme_constant_override("v_separation", 10)
 	form.add_child(multi_row)
 	if not on_web:
 		var host_button := Button.new()
@@ -301,21 +348,27 @@ func _build_ui() -> void:
 	# Bouton drapeau (haut droite) : bascule FR/EN puis reconstruit le menu.
 	var lang_button := Button.new()
 	lang_button.text = Lang.flag_label()
-	lang_button.custom_minimum_size = Vector2(128, 52)
-	UiKit.style_button(lang_button, UiKit.ACCENT_BLUE, 26)
+	var flag_width: float = 92.0 if narrow else 128.0
+	var flag_height: float = 40.0 if narrow else 52.0
+	lang_button.custom_minimum_size = Vector2(flag_width, flag_height)
+	UiKit.style_button(lang_button, UiKit.ACCENT_BLUE, 18 if narrow else 26)
 	lang_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	lang_button.offset_left = -148
-	lang_button.offset_top = 16
-	lang_button.offset_right = -20
-	lang_button.offset_bottom = 68
+	lang_button.offset_left = -(flag_width + 12.0)
+	lang_button.offset_top = 12
+	lang_button.offset_right = -12
+	lang_button.offset_bottom = 12 + flag_height
 	lang_button.pressed.connect(func() -> void:
 		Lang.toggle()
 		get_tree().reload_current_scene.call_deferred())
 	add_child(lang_button)
 
+## Intertitre d'une section. Le repli à la ligne est ESSENTIEL : sans lui, un
+## libellé long (« Multijoueur — héberge, ou rejoins… ») impose sa largeur au
+## panneau entier, qui débordait alors de l'écran sur un téléphone.
 func _section_label(text: String) -> Label:
 	var label := Label.new()
 	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.modulate = Color(1, 1, 1, 0.8)
 	return label
 
@@ -375,9 +428,15 @@ func _on_color_selected(index: int) -> void:
 	_selected_color = index
 	_refresh_color_buttons()
 
+## La pastille choisie est pleinement opaque ET cerclée de blanc — deux
+## indices plutôt qu'un, pour que le choix se voie même en couleur pâle.
 func _refresh_color_buttons() -> void:
 	for i in _color_buttons.size():
-		_color_buttons[i].modulate.a = 1.0 if i == _selected_color else 0.35
+		var chosen: bool = i == _selected_color
+		_color_buttons[i].modulate.a = 1.0 if chosen else 0.4
+		for state in ["normal", "hover", "pressed", "focus"]:
+			var dot: StyleBoxFlat = _color_buttons[i].get_theme_stylebox(state)
+			dot.set_border_width_all(3 if chosen else 0)
 
 func _apply_settings() -> void:
 	var chosen_name := _name_edit.text.strip_edges()
@@ -441,6 +500,22 @@ func _on_joined_lobby() -> void:
 func _on_net_join_failed(reason: String) -> void:
 	_joining = false
 	_show_error(reason)
+
+## Debug : deux captures du menu (haut, puis bas du défilement) et on quitte.
+func _capture_layout(delay: float) -> void:
+	await get_tree().create_timer(delay).timeout
+	var size := get_viewport_rect().size
+	var tag := "%dx%d" % [int(size.x), int(size.y)]
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png("user://menu_%s_haut.png" % tag)
+	if _scroll != null:
+		_scroll.scroll_vertical = 100000  # borné automatiquement au maximum.
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png("user://menu_%s_bas.png" % tag)
+	print("MENUSHOT_OK ", tag, " defilement_max=", _scroll.get_v_scroll_bar().max_value \
+		if _scroll != null else 0)
+	get_tree().quit()
 
 ## Contexte navigateur : l'hôte a servi la page, donc son adresse est celle du
 ## site et le mot de passe voyage dans l'URL (?mdp=…). Renvoie {} hors du web.

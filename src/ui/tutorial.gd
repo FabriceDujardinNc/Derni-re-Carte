@@ -85,8 +85,11 @@ func _build_ui() -> void:
 	_panel.anchor_right = 0.5
 	_panel.anchor_top = 1.0
 	_panel.anchor_bottom = 1.0
-	_panel.offset_left = -360
-	_panel.offset_right = 360
+	# Demi-largeur bornée : le tutoriel est la PREMIÈRE chose qu'un invité voit,
+	# il ne doit jamais sortir de l'écran (fenêtre réduite, téléphone).
+	var half: float = clampf(root.get_viewport_rect().size.x * 0.5 - 16.0, 150.0, 360.0)
+	_panel.offset_left = -half
+	_panel.offset_right = half
 	_panel.offset_top = -252
 	_panel.offset_bottom = -48
 	_panel.visible = false

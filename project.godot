@@ -18,6 +18,11 @@ config/icon="res://icon.svg"
 [audio]
 
 driver/enable_input=true
+# Navigateur : Godot utilise par défaut la lecture « Sample », qui exige
+# un worklet audio — indisponible hors contexte sécurisé (HTTP sur IP
+# locale). On force la lecture « Stream », qui passe par le pilote audio
+# de repli et fonctionne en HTTP.
+general/default_playback_type.web=0
 
 [autoload]
 

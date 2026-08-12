@@ -35,9 +35,25 @@ func _build_ui() -> void:
 	add_child(card_layer)
 	UiKit.spawn_floating_cards(card_layer, 8)
 
+	# Défilable comme le menu : avec le lien de partage, l'état du pare-feu et
+	# la liste des joueurs, ce panneau dépasse vite une fenêtre réduite ou un
+	# écran de téléphone.
+	var scroll := ScrollContainer.new()
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
+
+	var margins := MarginContainer.new()
+	margins.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for side in ["margin_left", "margin_right"]:
+		margins.add_theme_constant_override(side, 16)
+	margins.add_theme_constant_override("margin_top", 20)
+	margins.add_theme_constant_override("margin_bottom", 24)
+	scroll.add_child(margins)
+
 	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margins.add_child(center)
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 18)
@@ -52,7 +68,8 @@ func _build_ui() -> void:
 
 	_panel = PanelContainer.new()
 	_panel.add_theme_stylebox_override("panel", UiKit.panel_style())
-	_panel.custom_minimum_size = Vector2(500, 0)
+	var available: float = get_viewport_rect().size.x - 48.0
+	_panel.custom_minimum_size = Vector2(clampf(available, 280.0, 500.0), 0)
 	column.add_child(_panel)
 
 	var box := VBoxContainer.new()
