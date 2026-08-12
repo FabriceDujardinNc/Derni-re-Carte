@@ -20,11 +20,12 @@ const MAX_REQUEST_BYTES := 8192
 const MAX_CLIENTS := 32
 const REQUEST_TIMEOUT_MS := 10000  ## Connexion ouverte sans requête = larguée.
 
-## En-têtes OBLIGATOIRES pour un export web Godot avec threads : sans
-## isolation d'origine, le navigateur refuse SharedArrayBuffer et le jeu
-## reste sur un écran noir.
-const ISOLATION_HEADERS := "Cross-Origin-Opener-Policy: same-origin\r\n" \
-	+ "Cross-Origin-Embedder-Policy: require-corp\r\n"
+## Pas d'en-têtes d'isolation d'origine ici. Ils ne servent qu'aux exports
+## AVEC threads (SharedArrayBuffer) ; or ceux-là exigent en plus un contexte
+## sécurisé — impossible en HTTP sur une IP locale. La version navigateur est
+## donc exportée SANS threads, et le navigateur ignorerait ces en-têtes en
+## affichant un avertissement inutile dans la console.
+const ISOLATION_HEADERS := ""
 
 const MIME_TYPES := {
 	"html": "text/html; charset=utf-8",

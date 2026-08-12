@@ -248,6 +248,8 @@ func _build_ui() -> void:
 		# Déjà renseignés par le lien : on les cache pour ne pas égarer l'invité.
 		_ip_edit.visible = false
 		_password_edit.visible = false
+		if bool(web["auto"]):
+			_on_join_pressed.call_deferred()
 
 	var multi_row := HBoxContainer.new()
 	multi_row.add_theme_constant_override("separation", 12)
@@ -448,10 +450,13 @@ func _web_context() -> Dictionary:
 	var host_name: String = str(JavaScriptBridge.eval("location.hostname", true))
 	var query: String = str(JavaScriptBridge.eval("location.search", true))
 	var pwd := ""
+	var auto := false
 	for pair in query.trim_prefix("?").split("&"):
 		if pair.begins_with("mdp="):
 			pwd = pair.trim_prefix("mdp=").uri_decode()
-	return {"host": host_name, "password": pwd}
+		elif pair == "auto=1":
+			auto = true  # « …&auto=1 » : entre sans même cliquer.
+	return {"host": host_name, "password": pwd, "auto": auto}
 
 ## Repêche une IP valide même si l'utilisateur colle du texte autour
 ## (« IP : 192.168.1.10 » → « 192.168.1.10 »).
