@@ -87,6 +87,15 @@ func _build_ui() -> void:
 			DisplayServer.clipboard_set(share_url)
 			copy.text = Lang.t("✅  Lien copié !"))
 		box.add_child(copy)
+		# Panne nº 1 en pratique : le pare-feu Windows jette les connexions
+		# entrantes sans rien dire (les invités voient « site inaccessible »).
+		# On indique le remède AVANT que le problème arrive.
+		var firewall_hint := Label.new()
+		firewall_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		firewall_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		firewall_hint.modulate = Color(1, 1, 1, 0.5)
+		firewall_hint.text = Lang.t("Ils voient « site inaccessible » ? Lance une fois autoriser-pare-feu.bat (clic droit → Exécuter en tant qu'administrateur).")
+		box.add_child(firewall_hint)
 
 	box.add_child(HSeparator.new())
 
