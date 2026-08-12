@@ -14,6 +14,11 @@ class_name WebHost
 const HTTP_PORT := 8080
 const CHUNK_SIZE := 262144  ## 256 Ko envoyés par connexion et par frame.
 const MAX_REQUEST_BYTES := 8192
+## Garde-fous : un serveur, même en réseau local, ne doit pas pouvoir être
+## saturé par un client bavard ou muet. 8 invités demandent une dizaine de
+## fichiers : 32 connexions simultanées sont largement suffisantes.
+const MAX_CLIENTS := 32
+const REQUEST_TIMEOUT_MS := 10000  ## Connexion ouverte sans requête = larguée.
 
 ## En-têtes OBLIGATOIRES pour un export web Godot avec threads : sans
 ## isolation d'origine, le navigateur refuse SharedArrayBuffer et le jeu
@@ -32,6 +37,10 @@ const MIME_TYPES := {
 	"ico": "image/x-icon",
 	"webmanifest": "application/manifest+json",
 }
+
+## Nom de la règle de pare-feu. SANS espace ni accent : elle traverse une
+## ligne de commande Windows, où tout caractère exotique se paie.
+const FIREWALL_RULE_NAME := "DerniereCarte-TCP"
 
 var served_directory := ""  ## Dossier contenant index.html (vide = introuvable).
 var _server: TCPServer
@@ -62,6 +71,41 @@ static func local_ip() -> String:
 			if address.begins_with(prefix):
 				return address
 	return "127.0.0.1"
+
+# ------------------------------------------------------- Pare-feu Windows
+# Sans autorisation, Windows JETTE les connexions entrantes en silence et les
+# invités voient « ce site est inaccessible ». Le jeu s'en occupe donc lui-même
+# au premier hébergement, plutôt que de laisser l'hôte chercher.
+
+## La règle existe-t-elle ? On exige de retrouver son nom dans la sortie :
+## le message d'absence de netsh est traduit, son nom de règle non.
+static func firewall_rule_present() -> bool:
+	if not OS.has_feature("windows"):
+		return true  # ailleurs, rien à autoriser.
+	var output: Array = []
+	var code := OS.execute("netsh",
+		["advfirewall", "firewall", "show", "rule", "name=" + FIREWALL_RULE_NAME],
+		output, true)
+	return code == 0 and str(output).contains(FIREWALL_RULE_NAME)
+
+## Demande l'autorisation à Windows (une fenêtre UAC s'ouvre, l'hôte clique
+## « Oui »). On passe par le script LIVRÉ plutôt que par une commande brute :
+## dans la fenêtre de Windows, l'hôte lit « autoriser-pare-feu.bat » — un nom
+## qu'il comprend — au lieu d'un netsh anonyme.
+static func request_firewall_rule() -> bool:
+	if not OS.has_feature("windows"):
+		return false
+	var script_path := OS.get_executable_path().get_base_dir() \
+		.path_join("autoriser-pare-feu.bat")
+	if not FileAccess.file_exists(script_path):
+		print("WebHost : autoriser-pare-feu.bat introuvable à côté du jeu.")
+		return false
+	var quoted := script_path.replace("'", "''")
+	var command := "Start-Process -FilePath '%s' -ArgumentList '/auto' -Verb RunAs -WindowStyle Hidden" % quoted
+	var pid := OS.create_process("powershell",
+		["-NoProfile", "-WindowStyle", "Hidden", "-Command", command])
+	print("WebHost : autorisation pare-feu demandée (pid %d)." % pid)
+	return pid > 0
 
 ## Démarre le partage. Renvoie faux si la version navigateur est absente : le
 ## multijoueur classique continue de fonctionner, seul le lien n'est pas offert.
@@ -105,8 +149,12 @@ func _process(_delta: float) -> void:
 	if _server == null:
 		return
 	while _server.is_connection_available():
-		_clients.append({"socket": _server.take_connection(), "request": PackedByteArray(),
-			"file": null, "sent": 0})
+		var socket := _server.take_connection()
+		if _clients.size() >= MAX_CLIENTS:
+			socket.disconnect_from_host()  # saturé : on refuse proprement.
+			continue
+		_clients.append({"socket": socket, "request": PackedByteArray(), "file": null,
+			"sent": 0, "deadline": Time.get_ticks_msec() + REQUEST_TIMEOUT_MS})
 	# Parcours à l'envers : on retire les connexions terminées au passage.
 	for i in range(_clients.size() - 1, -1, -1):
 		if not _serve(_clients[i]):
@@ -140,6 +188,9 @@ func _serve(client: Dictionary) -> bool:
 		client["request"] = buffer
 	var request: String = (client["request"] as PackedByteArray).get_string_from_utf8()
 	if not request.contains("\r\n\r\n"):
+		# Requête incomplète : tolérée un instant, jamais indéfiniment.
+		if Time.get_ticks_msec() > int(client["deadline"]):
+			return false
 		return (client["request"] as PackedByteArray).size() < MAX_REQUEST_BYTES
 	return _respond(client, socket, request.get_slice("\r\n", 0))
 

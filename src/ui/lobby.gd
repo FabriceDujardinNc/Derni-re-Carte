@@ -8,6 +8,8 @@ var _players_box: VBoxContainer
 var _start_button: Button
 var _info_label: Label
 var _panel: PanelContainer
+var _firewall_label: Label
+var _firewall_checks_left := 15  ## ~1 minute de vérifications, puis on lâche.
 
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -89,13 +91,12 @@ func _build_ui() -> void:
 		box.add_child(copy)
 		# Panne nº 1 en pratique : le pare-feu Windows jette les connexions
 		# entrantes sans rien dire (les invités voient « site inaccessible »).
-		# On indique le remède AVANT que le problème arrive.
-		var firewall_hint := Label.new()
-		firewall_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		firewall_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		firewall_hint.modulate = Color(1, 1, 1, 0.5)
-		firewall_hint.text = Lang.t("Ils voient « site inaccessible » ? Lance une fois autoriser-pare-feu.bat (clic droit → Exécuter en tant qu'administrateur).")
-		box.add_child(firewall_hint)
+		# Le jeu a déjà demandé l'autorisation ; ici on rend compte de l'état.
+		_firewall_label = Label.new()
+		_firewall_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_firewall_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(_firewall_label)
+		_refresh_firewall_label()
 
 	box.add_child(HSeparator.new())
 
@@ -125,6 +126,33 @@ func _build_ui() -> void:
 		Net.leave()
 		get_tree().change_scene_to_file("res://scenes/menu.tscn"))
 	column.add_child(back)
+
+## Autorisation réseau : « c'est bon », « clique Oui », ou la manœuvre manuelle.
+## Tant qu'elle manque, on re-teste : l'hôte voit le feu passer au vert sans
+## avoir à comprendre ce qui se passe.
+func _refresh_firewall_label() -> void:
+	if _firewall_label == null:
+		return
+	if Net.firewall_ok:
+		_firewall_label.text = Lang.t("✅ Réseau autorisé — tes amis peuvent entrer.")
+		_firewall_label.add_theme_color_override("font_color", Color(0.6, 0.9, 0.7))
+		return
+	_firewall_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.35))
+	if Net.firewall_asked:
+		_firewall_label.text = Lang.t("⏳ Windows demande d'autoriser le réseau : clique « Oui ». Sans ça, tes amis verront « site inaccessible ».")
+	else:
+		_firewall_label.text = Lang.t("⚠️ Réseau non autorisé : lance autoriser-pare-feu.bat (clic droit → Exécuter en tant qu'administrateur), sinon tes amis ne pourront pas entrer.")
+	# On re-teste tant que ce n'est pas réglé : l'hôte peut cliquer « Oui »
+	# à tout moment. La vérification interroge Windows (~0,2 s), donc on
+	# l'espace et on s'arrête au bout d'une minute pour ne pas hacher le salon.
+	if _firewall_checks_left <= 0:
+		return
+	_firewall_checks_left -= 1
+	await get_tree().create_timer(4.0).timeout
+	if not is_inside_tree():
+		return
+	Net.refresh_firewall_state()
+	_refresh_firewall_label()
 
 func _animate_entrance() -> void:
 	await get_tree().process_frame

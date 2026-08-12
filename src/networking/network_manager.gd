@@ -39,6 +39,10 @@ var _clients_ready := 0
 const WEB_HOST_SCRIPT := preload("res://src/networking/web_host.gd")
 var web_host: Node
 
+## État du pare-feu Windows chez l'hôte (affiché dans le salon).
+var firewall_ok := true       ## L'autorisation réseau est en place.
+var firewall_asked := false   ## On vient d'ouvrir la fenêtre d'autorisation.
+
 func client_mode() -> bool:
 	return active and not is_server
 
@@ -67,8 +71,18 @@ func host_game(port: int, pwd: String, player_name: String, color: int) -> Error
 		web_host = WEB_HOST_SCRIPT.new()
 		add_child(web_host)
 		web_host.start()
+	# Autorisation réseau : le jeu la demande LUI-MÊME au premier hébergement.
+	# Sans elle, Windows jette les connexions et les invités ne voient rien.
+	firewall_ok = WEB_HOST_SCRIPT.firewall_rule_present()
+	if not firewall_ok:
+		firewall_asked = WEB_HOST_SCRIPT.request_firewall_rule()
 	lobby_updated.emit()
 	return OK
+
+## Re-teste l'autorisation (le salon rappelle ceci après le clic sur « Oui »).
+func refresh_firewall_state() -> bool:
+	firewall_ok = WEB_HOST_SCRIPT.firewall_rule_present()
+	return firewall_ok
 
 func join_game(ip: String, port: int, pwd: String, player_name: String, color: int) -> Error:
 	print("Net : connexion à %s:%d…" % [ip, port])
